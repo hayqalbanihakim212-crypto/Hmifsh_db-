@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      if (!localStorage.getItem("adminToken")) {
+        window.location.href = "login.html";
+      }
+    </script>
+    <title>Dashboard Admin HMIF</title>
+    <link rel="stylesheet" href="../adminDasboard/style-admin.css" />
+  </head>
+  <body>
+    <header class="admin-header">
+      <h1>Dashboard Admin HMIF</h1>
+      <nav class="top-nav">
+        <a href="../src/index.html" class="link-back">← Lihat Website</a>
+        <button onclick="logout()" class="btn-logout">Logout</button>
+      </nav>
+    </header>
+
+    <div class="container">
+      <!-- Form Tambah Pengurus -->
+      <div class="section">
+        <h2>Tambah Pengurus</h2>
+        <form id="addPengurusForm">
+          <input
+            type="text"
+            id="p_id"
+            placeholder="ID Elemen (HTML ID)"
+            required
+          />
+          <input type="text" id="p_nama" placeholder="Nama Pengurus" required />
+          <input
+            type="text"
+            id="p_sosmed"
+            placeholder="Username Instagram/Sosmed"
+          />
+          <input type="text" id="p_web" placeholder="URL Website Personal" />
+          <button type="submit">Simpan Pengurus</button>
+        </form>
+      </div>
+
+      <!-- Form Tambah Pengaduan -->
+      <div class="section">
+        <h2>Kirim Pengaduan</h2>
+        <form id="addPengaduanForm">
+          <input
+            type="text"
+            id="ad_identitas"
+            placeholder="Nama/Identitas"
+            required
+          />
+          <input type="number" id="ad_nim" placeholder="NIM" required />
+          <input
+            type="number"
+            id="ad_kontak"
+            placeholder="Kontak (WA)"
+            required
+          />
+          <input type="text" id="ad_jurusan" placeholder="Jurusan" required />
+          <input type="text" id="ad_fakultas" placeholder="Fakultas" required />
+          <input type="text" id="ad_subject" placeholder="Subjek" required />
+          <textarea
+            id="ad_description"
+            placeholder="Deskripsi Pengaduan"
+            required
+          ></textarea>
+          <label>Upload Bukti:</label>
+          <input
+            type="file"
+            id="ad_bukti"
+            accept="image/*,video/*,application/pdf"
+          />
+          <button type="submit">Kirim Pengaduan</button>
+        </form>
+      </div>
+
+      <!-- Section Upload Dana -->
+      <div class="section">
+        <h2>Upload Dana</h2>
+        <form id="addDanaForm">
+          <input type="text" name="judul" placeholder="Judul Dana" required />
+          <textarea name="deskripsi" placeholder="Deskripsi"></textarea>
+          <input type="number" name="amount" placeholder="Jumlah" required />
+          <input type="file" name="file" />
+          <button type="submit">Upload Dana</button>
+        </form>
+        <div id="danaList"></div>
+      </div>
+
+      <!-- Section Upload Berita -->
+      <div class="section">
+        <h2>Upload Berita</h2>
+        <form id="addBeritaForm">
+          <input type="text" name="judul" placeholder="Judul Berita" required />
+          <textarea
+            name="konten"
+            placeholder="Konten Berita"
+            required
+          ></textarea>
+          <input type="file" name="gambar" accept="image/*" />
+          <button type="submit">Upload Berita</button>
+        </form>
+        <div id="beritaList"></div>
+      </div>
+
+      <!-- Section Upload Buku -->
+      <div class="section">
+        <h2>Upload Buku</h2>
+        <form id="addBukuForm">
+          <input type="text" name="judul" placeholder="Judul Buku" required />
+          <input type="text" name="penulis" placeholder="Penulis" />
+          <input type="file" name="file" accept=".pdf,.doc,.docx" />
+          <button type="submit">Upload Buku</button>
+        </form>
+        <div id="bukuList"></div>
+      </div>
+
+      <!-- Section Upload Proker -->
+      <div class="section">
+        <h2>Upload Proker</h2>
+        <form id="addProkerForm">
+          <input
+            type="text"
+            name="nama_proker"
+            placeholder="Nama Proker"
+            required
+          />
+          <input
+            type="text"
+            name="departemen_id"
+            placeholder="ID Departemen"
+            required
+          />
+          <textarea name="deskripsi" placeholder="Deskripsi Proker"></textarea>
+          <input type="file" name="gambar" accept="image/*" />
+          <button type="submit">Upload Proker</button>
+        </form>
+        <div id="prokerList"></div>
+      </div>
+
+      <!-- Tabel Control Pengurus -->
+      <div class="section">
+        <h2>Daftar Pengurus</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Nama</th>
+              <th>ID</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="pengurusControl"></tbody>
+        </table>
+      </div>
+
+      <!-- List Pengaduan -->
+      <div class="section">
+        <h2>Daftar Pengaduan Masuk</h2>
+        <div id="pengaduanList"></div>
+      </div>
+    </div>
+
+    <script src="../adminDasboard/admin.js"></script>
+  </body>
+</html>

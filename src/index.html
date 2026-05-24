@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../src/style.css"/>
+     <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <title>HmiFsh Uinsu</title>
+  </head>
+  <body class="indexHome">
+    <nav class="navbar navbar-expand-lg navbar-hmi">
+      <div class="container">
+        <img
+          src="../strukturan.png/HMIKOHATIlogo.png"
+          alt="HMI Logo"
+          class="logo"
+        />
+        <a class="navbar-brand" href="index.html"> HmiFsh Uinsu </a>
+        <div class="collapse navbar-collapse">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a class="nav-link active" href="index.html">Home</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="about.html">About Me</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="contact.html">Contact Me</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="help.html">Help</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="bottom-sheet" id="bottomSheet">
+      <div class="drag-handle" id="dragHandle">
+        <div class="arrow" id="arrowIcon"></div>
+        <div class="line"></div>
+      </div>
+    </div>
+
+    <main class="container mt-4">
+      <div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner">
+          <div class="carousel-item active">
+            <img
+              src="https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1200&h=400"
+              class="d-block w-100"
+              alt="Slide 1"
+            />
+          </div>
+          <div class="carousel-item">
+            <img
+              src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&h=400"
+              class="d-block w-100"
+              alt="Slide 2"
+            />
+          </div>
+          <div class="carousel-item">
+            <img
+              src="https://images.unsplash.com/photo-1523240715639-99a8088ff9a2?auto=format&fit=crop&w=1200&h=400"
+              class="d-block w-100"
+              alt="Slide 3"
+            />
+          </div>
+        </div>
+        <button
+          class="carousel-control-prev"
+          type="button"
+          data-bs-target="#carouselExample"
+          data-bs-slide="prev"
+        >
+          <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Previous</span>
+        </button>
+        <button
+          class="carousel-control-next"
+          type="button"
+          data-bs-target="#carouselExample"
+          data-bs-slide="next"
+        >
+          <span class="carousel-control-next-icon" aria-hidden="true"></span>
+          <span class="visually-hidden">Next</span>
+        </button>
+      </div>
+        <div class="container mt-5">
+          <h2 class="title">Berita Terbaru</h2>
+          <div class="row" id="beritaContainer"></div>
+        </div>
+    <div class="menu-content">
+    <div class="welcome-section reveal">
+      <h3 class="welcome-title">
+        Strukturan HMI Komisariat Fakultas Syari'ah dan Hukum Universitas
+        Islam Negeri Sumatera Utara
+      </h3>
+      <p class="welcome-year">Periode Tahun 2026-2028</p>
+    </div>
+    
+    <main class="umuman">
+      <div class="namaKeumuman">
+        <div class="pengurus-item">
+          <img src="../strukturan.png/seksinyaAUHH.png" class="circle-crop" alt="Foto">
+          <div>
+            <h3 class="pengurus-name">Fitrah Ade Dikiansyah</h3>
+            <p class="pengurus-title">Sekretaris Umum</p>
+            <button class="btn" id="sekretaris">Following</button>
+          </div>
+        </div>
+      </div>
+      <div class="namaKeumuman">
+        <div class="pengurus-item">
+          <img src="../strukturan.png/oppSOGANawk.png" class="circle-crop" alt="Foto">
+          <div>
+            <h3 class="pengurus-name">Ajri Ajhad Ajijan S.Meliala</h3>
+            <p class="pengurus-title">Ketua Umum</p>
+            <button class="btn" id="ketua">Following</button>
+          </div>
+        </div>
+      </div>
+      <div class="namaKeumuman">
+        <div class="pengurus-item">
+          <img src="../strukturan.png/bendaharam.png" class="circle-crop" alt="Foto">
+          <div>
+            <h3 class="pengurus-name">Sahara Aulia Nasution</h3>
+            <p class="pengurus-title">Bendahara Umum</p>
+            <button class="btn" id="bendahara">Following</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <main class="containerDepartemen">
+      <div class="containerCardD1">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="title">Bidang Pemberdayaan Perempuan</h5>
+            <a class ="btn" href="../programKerja/prokerPP.html">Tinjau Progres</a>
+          </div>
+        </div>
+      </div>
+      <div class="containerCardD2">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="title">Bidang Administrasi & Kesekretariat</h5>
+            <a class ="btn" href="../programKerja/prokerAK.html">Tinjau Progres</a>
+          </div>
+        </div>
+      </div>
+      <div class="containerCardD3">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="title">Bidang Penelitian Pengembangan & Pembinaan Anggota</h5>
+            <a class ="btn" href="../programKerja/prokerPPPA.html">Tinjau Progres</a>
+          </div>
+        </div>
+      </div>
+      <div class="containerCardD4">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="title">Bidang Perguruan Tinggi Kemahasiswaan & Pemuda</h5>
+            <a class ="btn" href="../programKerja/prokerPTKP.html">Tinjau Progres</a>
+          </div>
+        </div>
+      </div>
+      <div class="containerCardD5">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="title">Bidang Kewirausahaan Pengembangan Profesi</h5>
+            <a class ="btn" href="../programKerja/prokerKPP.html">Tinjau Progres</a>
+          </div>
+        </div>
+      </div>
+      <div class="containerCardD6">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="title">Bidang Keuangan & Perlengkapan</h5>
+            <a class ="btn" href="../programKerja/prokerKP.html">Tinjau Progres</a>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+</div>
+
+    <footer class="bg-body-tertiary mb-0">
+      <div class="container text-center">
+        <p class="mb-0">&copy; 2025-2028 HMI Komisariat FSH UINSU. Yakusa!</p>
+      </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../src/script.js"></script>
+  </body>
+</html>
