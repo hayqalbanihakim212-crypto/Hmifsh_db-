@@ -9,7 +9,7 @@
       }
     </script>
     <title>Dashboard Admin HMIF</title>
-    <link rel="stylesheet" href="../adminDasboard/style-admin.css" />
+    <link rel="stylesheet" href="../src/style.css" />
   </head>
   <body>
     <header class="admin-header">
@@ -20,148 +20,310 @@
       </nav>
     </header>
 
-    <div class="container">
-      <!-- Form Tambah Pengurus -->
-      <div class="section">
-        <h2>Tambah Pengurus</h2>
-        <form id="addPengurusForm">
-          <input
-            type="text"
-            id="p_id"
-            placeholder="ID Elemen (HTML ID)"
-            required
-          />
-          <input type="text" id="p_nama" placeholder="Nama Pengurus" required />
-          <input
-            type="text"
-            id="p_sosmed"
-            placeholder="Username Instagram/Sosmed"
-          />
-          <input type="text" id="p_web" placeholder="URL Website Personal" />
-          <button type="submit">Simpan Pengurus</button>
-        </form>
-      </div>
+    <main class="admin-wrapper">
+      <div class="container">
+        <!-- Template untuk JavaScript agar JS tetap bersih -->
+        <template id="loaderTemplate">
+          <div class="loading-container">
+            <div class="hmi-spinner"></div>
+          </div>
+        </template>
 
-      <!-- Form Tambah Pengaduan -->
-      <div class="section">
-        <h2>Kirim Pengaduan</h2>
-        <form id="addPengaduanForm">
-          <input
-            type="text"
-            id="ad_identitas"
-            placeholder="Nama/Identitas"
-            required
-          />
-          <input type="number" id="ad_nim" placeholder="NIM" required />
-          <input
-            type="number"
-            id="ad_kontak"
-            placeholder="Kontak (WA)"
-            required
-          />
-          <input type="text" id="ad_jurusan" placeholder="Jurusan" required />
-          <input type="text" id="ad_fakultas" placeholder="Fakultas" required />
-          <input type="text" id="ad_subject" placeholder="Subjek" required />
-          <textarea
-            id="ad_description"
-            placeholder="Deskripsi Pengaduan"
-            required
-          ></textarea>
-          <label>Upload Bukti:</label>
-          <input
-            type="file"
-            id="ad_bukti"
-            accept="image/*,video/*,application/pdf"
-          />
-          <button type="submit">Kirim Pengaduan</button>
-        </form>
-      </div>
+        <template id="beritaTemplate">
+          <div class="col-md-4 mb-4 fade-in">
+            <div class="card h-100 shadow-sm admin-card">
+              <img src="" class="card-img-top" alt="Berita" />
+              <div class="card-body">
+                <h5 class="card-title text-success"></h5>
+                <p class="card-text text-truncate"></p>
+                <p class="card-text"><small class="text-muted"></small></p>
+              </div>
+            </div>
+          </div>
+        </template>
 
-      <!-- Section Upload Dana -->
-      <div class="section">
-        <h2>Upload Dana</h2>
-        <form id="addDanaForm">
-          <input type="text" name="judul" placeholder="Judul Dana" required />
-          <textarea name="deskripsi" placeholder="Deskripsi"></textarea>
-          <input type="number" name="amount" placeholder="Jumlah" required />
-          <input type="file" name="file" />
-          <button type="submit">Upload Dana</button>
-        </form>
-        <div id="danaList"></div>
-      </div>
+        <!-- Template untuk Item Kontrol Carousel -->
+        <template id="carouselItemTemplate">
+          <div
+            class="d-flex justify-content-between align-items-center mb-2 p-2 border bg-white text-dark rounded"
+          >
+            <span class="slide-title"></span>
+            <button class="btn btn-sm btn-danger btn-delete-carousel">
+              Hapus
+            </button>
+          </div>
+        </template>
 
-      <!-- Section Upload Berita -->
-      <div class="section">
-        <h2>Upload Berita</h2>
-        <form id="addBeritaForm">
-          <input type="text" name="judul" placeholder="Judul Berita" required />
-          <textarea
-            name="konten"
-            placeholder="Konten Berita"
-            required
-          ></textarea>
-          <input type="file" name="gambar" accept="image/*" />
-          <button type="submit">Upload Berita</button>
-        </form>
-        <div id="beritaList"></div>
-      </div>
+        <!-- Template untuk Baris Tabel (Pengurus/Berita) -->
+        <template id="tableRowTemplate">
+          <tr>
+            <td class="col-nama"></td>
+            <td class="col-info"></td>
+            <td class="col-aksi">
+              <button class="btn-edit btn btn-sm btn-warning">Edit</button>
+              <button class="btn-delete">Hapus</button>
+            </td>
+          </tr>
+        </template>
 
-      <!-- Section Upload Buku -->
-      <div class="section">
-        <h2>Upload Buku</h2>
-        <form id="addBukuForm">
-          <input type="text" name="judul" placeholder="Judul Buku" required />
-          <input type="text" name="penulis" placeholder="Penulis" />
-          <input type="file" name="file" accept=".pdf,.doc,.docx" />
-          <button type="submit">Upload Buku</button>
-        </form>
-        <div id="bukuList"></div>
-      </div>
+        <!-- Template untuk Item Pengaduan -->
+        <template id="pengaduanTemplate">
+          <div class="admin-card card mb-3 fade-in">
+            <div class="card-body">
+              <h6 class="subject text-success fw-bold"></h6>
+              <p class="identitas small mb-1 text-white-50"></p>
+              <p class="description card-text text-white"></p>
+              <small class="timestamp text-muted"></small>
+            </div>
+          </div>
+        </template>
 
-      <!-- Section Upload Proker -->
-      <div class="section">
-        <h2>Upload Proker</h2>
-        <form id="addProkerForm">
-          <input
-            type="text"
-            name="nama_proker"
-            placeholder="Nama Proker"
-            required
-          />
-          <input
-            type="text"
-            name="departemen_id"
-            placeholder="ID Departemen"
-            required
-          />
-          <textarea name="deskripsi" placeholder="Deskripsi Proker"></textarea>
-          <input type="file" name="gambar" accept="image/*" />
-          <button type="submit">Upload Proker</button>
-        </form>
-        <div id="prokerList"></div>
-      </div>
+        <!-- Section Manajemen Carousel -->
+        <div class="section">
+          <h2>Manajemen Carousel Utama</h2>
+          <form id="addCarouselForm">
+            <input
+              type="text"
+              id="c_judul"
+              placeholder="Judul Slide (Opsional)"
+            />
+            <input type="file" id="c_gambar" accept="image/*" required />
+            <button type="submit">Tambah ke Carousel</button>
+          </form>
+          <div id="carouselControlList"></div>
+        </div>
 
-      <!-- Tabel Control Pengurus -->
-      <div class="section">
-        <h2>Daftar Pengurus</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Nama</th>
-              <th>ID</th>
-              <th>Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="pengurusControl"></tbody>
-        </table>
-      </div>
+        <!-- Form Tambah Pengurus -->
+        <div class="section">
+          <h2 id="pengurusFormTitle">Tambah Pengurus</h2>
+          <form id="addPengurusForm">
+            <input
+              type="text"
+              id="p_id"
+              placeholder="ID Elemen (HTML ID)"
+              required
+            />
+            <input
+              type="text"
+              id="p_nama"
+              placeholder="Nama Pengurus"
+              required
+            />
+            <input
+              type="text"
+              id="p_jabatan"
+              placeholder="Jabatan (cth: Ketua Umum)"
+              required
+            />
+            <input
+              type="text"
+              id="p_sosmed"
+              placeholder="Username Instagram/Sosmed"
+            />
+            <input type="text" id="p_web" placeholder="URL Website Personal" />
+            <label>Foto Pengurus:</label>
+            <div id="p_preview_container" style="margin-bottom: 10px">
+              <img
+                id="p_preview"
+                src=""
+                alt="Preview"
+                style="
+                  max-width: 150px;
+                  display: none;
+                  border-radius: 8px;
+                  border: 2px solid #006400;
+                  object-fit: cover;
+                "
+              />
+            </div>
+            <input type="file" id="p_foto" accept="image/*" />
+            <div class="d-flex gap-2">
+              <button type="submit" id="btnSubmitPengurus">
+                Simpan Pengurus
+              </button>
+              <button
+                type="button"
+                id="btnCancelPengurus"
+                class="btn btn-secondary"
+                style="display: none; background-color: #6c757d; color: white"
+              >
+                Batal
+              </button>
+            </div>
+          </form>
+        </div>
 
-      <!-- List Pengaduan -->
-      <div class="section">
-        <h2>Daftar Pengaduan Masuk</h2>
-        <div id="pengaduanList"></div>
+        <!-- Form Tambah Pengaduan -->
+        <div class="section">
+          <h2>Kirim Pengaduan</h2>
+          <form id="addPengaduanForm">
+            <input
+              type="text"
+              id="ad_identitas"
+              placeholder="Nama/Identitas"
+              required
+            />
+            <input type="number" id="ad_nim" placeholder="NIM" required />
+            <input
+              type="number"
+              id="ad_kontak"
+              placeholder="Kontak (WA)"
+              required
+            />
+            <input type="text" id="ad_jurusan" placeholder="Jurusan" required />
+            <input
+              type="text"
+              id="ad_fakultas"
+              placeholder="Fakultas"
+              required
+            />
+            <input type="text" id="ad_subject" placeholder="Subjek" required />
+            <textarea
+              id="ad_description"
+              placeholder="Deskripsi Pengaduan"
+              required
+            ></textarea>
+            <label>Upload Bukti:</label>
+            <input
+              type="file"
+              id="ad_bukti"
+              accept="image/*,video/*,application/pdf"
+            />
+            <button type="submit">Kirim Pengaduan</button>
+          </form>
+        </div>
+
+        <!-- Section Upload Dana -->
+        <div class="section">
+          <h2>Upload Dana</h2>
+          <form id="addDanaForm">
+            <input type="text" name="judul" placeholder="Judul Dana" required />
+            <textarea name="deskripsi" placeholder="Deskripsi"></textarea>
+            <input type="number" name="amount" placeholder="Jumlah" required />
+            <input type="file" name="file" />
+            <button type="submit">Upload Dana</button>
+          </form>
+          <div id="danaList"></div>
+        </div>
+
+        <!-- Section Upload Berita -->
+        <div class="section">
+          <h2>Upload Berita</h2>
+          <form id="addBeritaForm">
+            <input
+              type="text"
+              name="judul"
+              placeholder="Judul Berita"
+              required
+            />
+            <textarea
+              name="konten"
+              placeholder="Konten Berita"
+              required
+            ></textarea>
+            <select id="b_bidang" required>
+              <option value="" disabled selected>Pilih Bidang Berita</option>
+              <option value="">Berita Umum</option>
+              <option value="AK">Administrasi & Kesekretariatan</option>
+              <option value="PPPA">PPPA (Penelitian & Pembinaan)</option>
+              <option value="PTKP">PTKP</option>
+              <option value="KPP">Kewirausahaan (KPP)</option>
+              <option value="KP">Keuangan & Perlengkapan</option>
+              <option value="PP">Pemberdayaan Perempuan</option>
+            </select>
+            <input type="file" name="gambar" accept="image/*" />
+            <button type="submit">Upload Berita</button>
+          </form>
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Judul</th>
+                <th>Bidang</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="beritaControlList"></tbody>
+          </table>
+        </div>
+
+        <!-- Section Upload Buku -->
+        <div class="section">
+          <h2>Upload Buku</h2>
+          <form id="addBukuForm">
+            <input type="text" name="judul" placeholder="Judul Buku" required />
+            <input type="text" name="penulis" placeholder="Penulis" />
+            <input type="file" name="file" accept=".pdf,.doc,.docx" />
+            <button type="submit">Upload Buku</button>
+          </form>
+          <div id="bukuList"></div>
+        </div>
+
+        <!-- Section Upload Proker -->
+        <div class="section">
+          <h2>Upload Proker</h2>
+          <form id="addProkerForm">
+            <input
+              type="text"
+              name="nama_proker"
+              placeholder="Nama Proker"
+              required
+            />
+            <input
+              type="text"
+              name="departemen_id"
+              placeholder="ID Departemen"
+              required
+            />
+            <textarea
+              name="deskripsi"
+              placeholder="Deskripsi Proker"
+            ></textarea>
+            <input type="file" name="gambar" accept="image/*" />
+            <button type="submit">Upload Proker</button>
+          </form>
+          <div id="prokerList"></div>
+        </div>
+
+        <!-- Section Update Data Grafik Pertumbuhan -->
+        <div class="section">
+          <h2>Update Statistik Pertumbuhan</h2>
+          <form id="updateGrowthForm">
+            <input type="month" id="g_bulan" required />
+            <input
+              type="number"
+              id="g_jumlah"
+              placeholder="Total Kader/Anggota"
+              required
+            />
+            <button type="submit">Update Grafik</button>
+          </form>
+          <p class="small text-muted">
+            Data ini akan muncul secara real-time di halaman Home.
+          </p>
+        </div>
+
+        <!-- Tabel Control Pengurus -->
+        <div class="section">
+          <h2>Daftar Pengurus</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Nama</th>
+                <th>ID</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="pengurusControl"></tbody>
+          </table>
+        </div>
+
+        <!-- List Pengaduan -->
+        <div class="section">
+          <h2>Daftar Pengaduan Masuk</h2>
+          <div id="pengaduanList"></div>
+        </div>
       </div>
-    </div>
+    </main>
 
     <script src="../adminDasboard/admin.js"></script>
   </body>

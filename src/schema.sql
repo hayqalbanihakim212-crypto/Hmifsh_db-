@@ -1,4 +1,15 @@
 
+-- Reset Database: Hapus tabel lama jika ada sebelum membuat yang baru
+DROP TABLE IF EXISTS stats_growth CASCADE;
+DROP TABLE IF EXISTS carousel CASCADE;
+DROP TABLE IF EXISTS proker CASCADE;
+DROP TABLE IF EXISTS dana CASCADE;
+DROP TABLE IF EXISTS buku CASCADE;
+DROP TABLE IF EXISTS berita CASCADE;
+DROP TABLE IF EXISTS pengaduan CASCADE;
+DROP TABLE IF EXISTS pengurus CASCADE;
+DROP TABLE IF EXISTS admins CASCADE;
+
 CREATE TABLE IF NOT EXISTS admins (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
@@ -7,35 +18,36 @@ CREATE TABLE IF NOT EXISTS admins (
 
 
 CREATE TABLE IF NOT EXISTS pengurus (
-    p_id VARCHAR(50) PRIMARY KEY,
-    p_nama VARCHAR(100) NOT NULL,
-    p_sosmed VARCHAR(100),
-    p_web VARCHAR(255)
+    id VARCHAR(50) PRIMARY KEY,
+    nama VARCHAR(100) NOT NULL,
+    jabatan VARCHAR(100),
+    foto_path VARCHAR(255),
+    sosmed VARCHAR(100),
+    web VARCHAR(255),
+    id_order INTEGER DEFAULT 0
 );
-
 
 CREATE TABLE IF NOT EXISTS pengaduan (
-    ad_id SERIAL PRIMARY KEY,
-    ad_identitas VARCHAR(100) NOT NULL,
-    ad_nim VARCHAR(20) NOT NULL,
-    ad_kontak VARCHAR(20) NOT NULL,
-    ad_jurusan VARCHAR(100) NOT NULL,
-    ad_fakultas VARCHAR(100) NOT NULL,
-    ad_subject VARCHAR(100) NOT NULL,
-    ad_description TEXT NOT NULL,
-    ad_bukti VARCHAR(255),
+    id SERIAL PRIMARY KEY,
+    identitas VARCHAR(100) NOT NULL,
+    nim VARCHAR(20) NOT NULL,
+    kontak VARCHAR(20) NOT NULL,
+    jurusan VARCHAR(100) NOT NULL,
+    fakultas VARCHAR(100) NOT NULL,
+    subject VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    file_path VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 
 CREATE TABLE IF NOT EXISTS berita (
     id SERIAL PRIMARY KEY,
     judul VARCHAR(255) NOT NULL,
     konten TEXT NOT NULL,
-    gambar_path VARCHAR(255),
+    bidang VARCHAR(50),
+    file_path VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
 
 CREATE TABLE IF NOT EXISTS buku (
     id SERIAL PRIMARY KEY,
@@ -45,4 +57,34 @@ CREATE TABLE IF NOT EXISTS buku (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS dana (
+    id SERIAL PRIMARY KEY,
+    judul VARCHAR(255) NOT NULL,
+    deskripsi TEXT,
+    amount NUMERIC,
+    file_path VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
+CREATE TABLE IF NOT EXISTS proker (
+    id SERIAL PRIMARY KEY,
+    nama_proker VARCHAR(255) NOT NULL,
+    departemen_id VARCHAR(50),
+    deskripsi TEXT,
+    file_path VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS carousel (
+    id SERIAL PRIMARY KEY,
+    judul VARCHAR(255),
+    file_path VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS stats_growth (
+    id SERIAL PRIMARY KEY,
+    bulan VARCHAR(10) UNIQUE NOT NULL,
+    jumlah INTEGER NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

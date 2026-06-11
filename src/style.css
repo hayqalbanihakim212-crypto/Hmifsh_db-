@@ -1,7 +1,13 @@
 :root {
-  --hmi-green: #008000;
+  --hmi-green: #006400;
+  --hmi-green-light: #00a000;
   --hmi-black: #1a1a1a;
-  --hmi-white: #ffffff;
+  --hmi-white: #f8f9fa;
+}
+
+/* Reset Dasar untuk Lebar */
+* {
+  box-sizing: border-box;
 }
 
 :root {
@@ -20,13 +26,12 @@
 }
 
 body {
-  background-color: var(--hmi-green) !important;
+  background: linear-gradient(180deg, #0a200a 0%, #000000 100%);
   margin: 0;
   padding: 0;
   background-attachment: fixed;
-  position: relative;
   min-height: 100vh;
-  color: var(--hmi-black);
+  color: rgba(255, 255, 255, 0.8); /* Jabatan pengurus menjadi abu-abu terang */
 }
 body.contactMe::after,
 body.indexHome::after,
@@ -36,13 +41,12 @@ body.help::after {
   background-image: var(--bg1);
   background-repeat: no-repeat;
   background-position: center;
-  background-size: var(--img-height) var(--img-width);
-  opacity: 0.5;
+  background-size: contain;
+  opacity: 0.1;
   position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  right: 0;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   z-index: -1;
   pointer-events: none;
 }
@@ -90,19 +94,20 @@ body.help::after {
 }
 
 .welcome-section {
-  background: linear-gradient(135deg, var(--hmi-white) 0%, #004d00 100%);
-  color: var(--hmi-black);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--hmi-white);
   text-align: center;
   padding: 3rem 2rem;
   margin: 2.5rem 0;
   border-radius: 20px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .welcome-section:hover {
-  transform: scale(1.02);
-  box-shadow: 0 20px 40px rgb(255, 255, 255);
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .welcome-title {
@@ -110,6 +115,54 @@ body.help::after {
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 15px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 2rem;
+}
+
+.hmi-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid rgba(0, 160, 0, 0.2);
+  border-top-color: var(--hmi-green-light);
+  border-radius: 50%;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.8s ease-in forwards;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal {
+  opacity: 0;
+  transition: all 0.8s ease-out;
+}
+
+.reveal.active {
+  opacity: 1;
+  animation: fadeInUp 0.8s ease-out forwards;
 }
 
 .welcome-year {
@@ -157,7 +210,9 @@ body.help::after {
 
 .pengurus-title {
   font-size: 0.9rem;
-  color: var(--hmi-black);
+  color: var(
+    --hmi-white
+  ); /* Teks utama menjadi putih agar jelas di background gelap */
   font-weight: 500;
 }
 
@@ -174,15 +229,210 @@ body.help::after {
   border: none;
 }
 
-.btn:hover {
+.welcome-section .btn:hover {
   background-color: var(--hmi-black) !important;
   color: var(--hmi-white) !important;
   transform: scale(1.05);
   transition: all 0.3s ease;
 }
 
-.title {
+/* Admin & Login Page Styles */
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+.admin-wrapper {
+  padding: 80px 20px 40px;
+  min-height: 100vh;
+  background-color: #f4f4f4;
+  color: #333;
+}
+
+.admin-header {
+  background-color: var(--hmi-black);
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+  border-bottom: 2px solid var(--hmi-green);
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.link-back {
   color: var(--hmi-white);
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.btn-logout {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.section {
+  background: #ffffff; /* Putih polos */
+  padding: 20px;
+  margin-bottom: 25px;
+  border-radius: 4px;
+  border: 1px solid #ddd; /* Border standar */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.section h2 {
+  color: var(--hmi-green);
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--hmi-green);
+  padding-bottom: 10px;
+}
+
+/* Form Elements inside Admin/Login */
+form input,
+form textarea,
+form select {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 1rem;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  color: #333;
+}
+
+form input:focus,
+form textarea:focus {
+  border-color: var(--hmi-green);
+  outline: none;
+}
+
+form button[type="submit"],
+.btn-admin {
+  background-color: var(--hmi-green);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  width: 100%;
+}
+
+/* Login Card Polosan */
+.login-card {
+  background: #ffffff;
+  max-width: 400px;
+  margin: 100px auto;
+  padding: 30px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.login-card h2 {
+  text-align: center;
+  color: var(--hmi-green);
+  margin-bottom: 20px;
+}
+
+.error {
+  color: #e74c3c;
+  background: #fdeaea;
+  padding: 10px;
+  margin-bottom: 15px;
+  border-radius: 4px;
+  display: none;
+  font-size: 14px;
+  text-align: center;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border: 1px solid #ddd;
+  margin-top: 10px;
+}
+
+.admin-table th {
+  background: var(--hmi-green);
+  color: white;
+  padding: 12px;
+  text-align: left;
+}
+
+.admin-table td {
+  padding: 12px;
+  border: 1px solid #eee;
+  color: #333;
+}
+
+/* Toast Notification System */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+}
+
+.hmi-toast {
+  background: rgba(0, 0, 0, 0.7);
+  color: var(
+    --hmi-white
+  ) !important; /* Memastikan teks di kartu departemen selalu putih */
+  padding: 12px 24px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 6px solid var(--hmi-green-light);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 300px;
+  animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.hmi-toast.error {
+  border-left-color: #e74c3c;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.admin-card {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 15px;
+}
+
+.title {
+  color: var(
+    --hmi-white
+  ); /* Judul default di index (Berita, Event) tetap putih */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -275,7 +525,7 @@ body.help::after {
   justify-content: center;
   text-align: center;
   background: rgba(0, 0, 0, 0.65);
-  color: var(--hmi-white);
+  color: #333; /* Teks di tabel admin tetap gelap karena background tabel putih */
   transition: 0.3s ease;
 }
 
@@ -293,7 +543,7 @@ body.indexak::after {
   background-image: var(--bg2);
   background-repeat: no-repeat;
   background-position: center;
-  background-size: var(--img-size-mode);
+  background-size: contain;
   opacity: 0.5;
   position: fixed;
   top: 0;
@@ -309,8 +559,8 @@ body.indexppa::after {
   background-image: var(--bg3);
   background-repeat: no-repeat;
   background-position: center;
-  background-size: var(--img-size-mode);
-  opacity: 0.08;
+  background-size: contain;
+  opacity: 0.15;
   position: fixed;
   top: 0;
   left: 0;
@@ -325,7 +575,7 @@ body.indexpkp::after {
   background-image: var(--bg4);
   background-repeat: no-repeat;
   background-position: center;
-  background-size: var(--img-size-mode);
+  background-size: contain;
   opacity: 0.5;
   position: fixed;
   top: 0;
@@ -341,7 +591,7 @@ body.indexpp::after {
   background-image: var(--bg5);
   background-repeat: no-repeat;
   background-position: center;
-  background-size: var(--img-size-mode);
+  background-size: contain;
   opacity: 0.5;
   position: fixed;
   top: 0;
@@ -357,8 +607,8 @@ body.indexkpp::after {
   background-image: var(--bg6);
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 100px;
-  opacity: 0.08;
+  background-size: contain;
+  opacity: 0.15;
   position: fixed;
   top: 0;
   left: 0;
@@ -373,8 +623,8 @@ body.indexkp::after {
   background-image: var(--bg7);
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 100px;
-  opacity: 0.08;
+  background-size: contain;
+  opacity: 0.15;
   position: fixed;
   top: 0;
   left: 0;
@@ -382,4 +632,9 @@ body.indexkp::after {
   right: 0;
   z-index: -1;
   pointer-events: none;
+  .section .title {
+    color: var(
+      --hmi-green
+    ); /* Judul di dalam kotak putih (.section) menjadi hijau agar terbaca */
+  }
 }

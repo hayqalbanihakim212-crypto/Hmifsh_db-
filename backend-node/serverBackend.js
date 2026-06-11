@@ -49,12 +49,14 @@ const pool = new Pool(
       },
 );
 
-pool.connect((err, client, release) => {
+pool.query("SELECT NOW()", (err, res) => {
   if (err) {
-    return console.log("gagal terhubung ke Database PostgreSQL", err.stack);
+    console.error("Gagal terhubung ke Database PostgreSQL:", err.message);
   } else {
-    return console.log("berhasil terhubung ke Database PostgreSQL");
-    release();
+    console.log(
+      "Berhasil terhubung ke Database PostgreSQL pada:",
+      res.rows[0].now,
+    );
   }
 });
 
@@ -145,25 +147,37 @@ app.get("/api/pengurus", async (req, res) => {
   }
 });
 
-app.post("/api/pengurus", authenticateToken, async (req, res) => {
-  const { id, nama, sosmed, web, id_order } = req.body;
-  try {
-    const result = await pool.query(
-      "INSERT INTO pengurus (id, nama, sosmed, web, id_order) VALUES ($1, $2, $3, $4, $5) RETURNING *",
-      [id, nama, sosmed, web, id_order],
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+app.post(
+  "/api/pengurus",
+  authenticateToken,
+  upload.single("foto"),
+  async (req, res) => {
+    const { id, nama, jabatan, sosmed, web, id_order } = req.body;
+    const foto_path = req.file ? `/uploads/${req.file.filename}` : null;
+    try {
+      const result = await pool.query(
+        "INSERT INTO pengurus (id, nama, jabatan, foto_path, sosmed, web, id_order) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+        [id, nama, jabatan, foto_path, sosmed, web, parseInt(id_order) || 0],
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      console.error(err);
+      res
+        .status(500)
+        .json({
+          success: false,
+          message: "Gagal menyimpan pengurus: " + err.message,
+        });
+    }
+  },
+);
 
 app.delete("/api/pengurus/:id", authenticateToken, async (req, res) => {
   try {
     await pool.query("DELETE FROM pengurus WHERE id = $1", [req.params.id]);
     res.json({ message: "Pengurus dihapus" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -220,7 +234,7 @@ app.post(
       );
       res.status(201).json(result.rows[0]);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ success: false, message: err.message });
     }
   },
 );
@@ -243,7 +257,7 @@ app.get("/api/pengaduan", async (req, res) => {
       total: total,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -266,36 +280,48 @@ app.get("/api/dana", async (req, res) => {
       total: total,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.post("/api/dana", upload.single("file"), async (req, res) => {
-  const { judul, deskripsi, amount } = req.body;
-  const file_path = req.file ? `/uploads/${req.file.filename}` : null;
-  try {
-    const result = await pool.query(
-      "INSERT INTO dana (judul, deskripsi, amount, file_path) VALUES ($1, $2, $3, $4) RETURNING *",
-      [judul, deskripsi, amount, file_path],
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+app.post(
+  "/api/dana",
+  authenticateToken,
+  upload.single("file"),
+  async (req, res) => {
+    const { judul, deskripsi, amount } = req.body;
+    const file_path = req.file ? `/uploads/${req.file.filename}` : null;
+    try {
+      const result = await pool.query(
+        "INSERT INTO dana (judul, deskripsi, amount, file_path) VALUES ($1, $2, $3, $4) RETURNING *",
+        [judul, deskripsi, amount, file_path],
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+);
 
 // --- ENDPOINT BERITA ---
 app.get("/api/berita", async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 6;
+  const bidang = req.query.bidang;
   const offset = (page - 1) * limit;
 
   try {
     res.set("Cache-Control", "public, max-age=300");
-    const result = await pool.query(
-      "SELECT *, count(*) OVER() AS total_count FROM berita ORDER BY created_at DESC LIMIT $1 OFFSET $2",
-      [limit, offset],
-    );
+    let query = "SELECT *, count(*) OVER() AS total_count FROM berita";
+    let params = [limit, offset];
+
+    if (bidang) {
+      query += " WHERE bidang = $3";
+      params.push(bidang);
+    }
+
+    query += " ORDER BY created_at DESC LIMIT $1 OFFSET $2";
+    const result = await pool.query(query, params);
     const total =
       result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
     res.json({
@@ -303,21 +329,80 @@ app.get("/api/berita", async (req, res) => {
       total: total,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.post("/api/berita", upload.single("gambar"), async (req, res) => {
-  const { judul, konten } = req.body;
-  const file_path = req.file ? `/uploads/${req.file.filename}` : null;
+app.post(
+  "/api/berita",
+  authenticateToken,
+  upload.single("gambar"),
+  async (req, res) => {
+    const { judul, konten, bidang } = req.body;
+    const file_path = req.file ? `/uploads/${req.file.filename}` : null;
+    try {
+      const result = await pool.query(
+        "INSERT INTO berita (judul, konten, bidang, file_path) VALUES ($1, $2, $3, $4) RETURNING *",
+        [judul, konten, bidang, file_path],
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+);
+
+app.put(
+  "/api/pengurus/:id",
+  authenticateToken,
+  upload.single("foto"),
+  async (req, res) => {
+    const { id, nama, jabatan, sosmed, web, id_order } = req.body;
+    const oldId = req.params.id;
+    const foto_path = req.file ? `/uploads/${req.file.filename}` : null;
+
+    try {
+      let query, params;
+      if (foto_path) {
+        query =
+          "UPDATE pengurus SET id=$1, nama=$2, jabatan=$3, sosmed=$4, web=$5, id_order=$6, foto_path=$7 WHERE id=$8 RETURNING *";
+        params = [
+          id,
+          nama,
+          jabatan,
+          sosmed,
+          web,
+          parseInt(id_order) || 0,
+          foto_path,
+          oldId,
+        ];
+      } else {
+        query =
+          "UPDATE pengurus SET id=$1, nama=$2, jabatan=$3, sosmed=$4, web=$5, id_order=$6 WHERE id=$7 RETURNING *";
+        params = [
+          id,
+          nama,
+          jabatan,
+          sosmed,
+          web,
+          parseInt(id_order) || 0,
+          oldId,
+        ];
+      }
+      const result = await pool.query(query, params);
+      res.json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+);
+
+app.delete("/api/berita/:id", authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query(
-      "INSERT INTO berita (judul, konten, file_path) VALUES ($1, $2, $3) RETURNING *",
-      [judul, konten, file_path],
-    );
-    res.status(201).json(result.rows[0]);
+    await pool.query("DELETE FROM berita WHERE id = $1", [req.params.id]);
+    res.json({ message: "Berita dihapus" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -340,23 +425,28 @@ app.get("/api/buku", async (req, res) => {
       total: total,
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
-app.post("/api/buku", upload.single("file"), async (req, res) => {
-  const { judul, penulis } = req.body;
-  const file_path = req.file ? `/uploads/${req.file.filename}` : null;
-  try {
-    const result = await pool.query(
-      "INSERT INTO buku (judul, penulis, file_path) VALUES ($1, $2, $3) RETURNING *",
-      [judul, penulis, file_path],
-    );
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+app.post(
+  "/api/buku",
+  authenticateToken,
+  upload.single("file"),
+  async (req, res) => {
+    const { judul, penulis } = req.body;
+    const file_path = req.file ? `/uploads/${req.file.filename}` : null;
+    try {
+      const result = await pool.query(
+        "INSERT INTO buku (judul, penulis, file_path) VALUES ($1, $2, $3) RETURNING *",
+        [judul, penulis, file_path],
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+);
 
 // --- ENDPOINT PROKER ---
 app.get("/api/proker", async (req, res) => {
@@ -377,17 +467,92 @@ app.get("/api/proker", async (req, res) => {
       total: total,
     });
   } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post(
+  "/api/proker",
+  authenticateToken,
+  upload.single("gambar"),
+  async (req, res) => {
+    const { nama_proker, departemen_id, deskripsi } = req.body;
+    const file_path = req.file ? `/uploads/${req.file.filename}` : null;
+    try {
+      const result = await pool.query(
+        "INSERT INTO proker (nama_proker, departemen_id, deskripsi, file_path) VALUES ($1, $2, $3, $4) RETURNING *",
+        [nama_proker, departemen_id, deskripsi, file_path],
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+);
+
+// --- ENDPOINT CAROUSEL ---
+app.get("/api/carousel", async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM carousel ORDER BY created_at DESC",
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post(
+  "/api/carousel",
+  authenticateToken,
+  upload.single("gambar"),
+  async (req, res) => {
+    const { judul } = req.body;
+    const file_path = req.file ? `/uploads/${req.file.filename}` : null;
+    if (!file_path)
+      return res.status(400).json({ error: "Gambar wajib diunggah" });
+
+    try {
+      const result = await pool.query(
+        "INSERT INTO carousel (judul, file_path) VALUES ($1, $2) RETURNING *",
+        [judul, file_path],
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
+
+app.delete("/api/carousel/:id", authenticateToken, async (req, res) => {
+  try {
+    await pool.query("DELETE FROM carousel WHERE id = $1", [req.params.id]);
+    res.json({ message: "Slide carousel dihapus" });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post("/api/proker", upload.single("gambar"), async (req, res) => {
-  const { nama_proker, departemen_id, deskripsi } = req.body;
-  const file_path = req.file ? `/uploads/${req.file.filename}` : null;
+// --- ENDPOINT STATISTIK PERTUMBUHAN ---
+app.get("/api/stats/growth", async (req, res) => {
   try {
     const result = await pool.query(
-      "INSERT INTO proker (nama_proker, departemen_id, deskripsi, file_path) VALUES ($1, $2, $3, $4) RETURNING *",
-      [nama_proker, departemen_id, deskripsi, file_path],
+      "SELECT bulan, jumlah FROM stats_growth ORDER BY TO_DATE(bulan, 'YYYY-MM') ASC",
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/stats/growth", authenticateToken, async (req, res) => {
+  const { bulan, jumlah } = req.body;
+  try {
+    const result = await pool.query(
+      `INSERT INTO stats_growth (bulan, jumlah) VALUES ($1, $2)
+       ON CONFLICT (bulan) DO UPDATE SET jumlah = EXCLUDED.jumlah
+       RETURNING *`,
+      [bulan, jumlah],
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
