@@ -6,10 +6,22 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
+const http = require("http");
+const { Server } = require("socket.io");
+const { v4: uuidv4 } = require("uuid");
+const nodemon = require("nodemon");
+
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { cors: { origin: "*" } });
 
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || "kunci_rahasia_hmif_2025";
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  console.error("GALAT KRITIS: JWT_SECRET tidak ditemukan di file .env!");
+  process.exit(1);
+}
 
 const uploadDir = "uploads";
 if (!fs.existsSync(uploadDir)) {
@@ -20,6 +32,12 @@ if (!fs.existsSync(uploadDir)) {
 app.use(express.json());
 app.use(cors());
 app.use("/uploads", express.static("uploads"));
+app.use((req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  next();
+});
 
 // Konfigurasi Multer
 const storage = multer.diskStorage({
@@ -41,11 +59,12 @@ const pool = new Pool(
           : false,
       }
     : {
-        user: process.env.DB_USER,
-        host: process.env.DB_HOST,
-        database: process.env.DB_NAME,
-        password: process.env.DB_PASSWORD,
-        port: process.env.DB_PORT || 5432,
+        connectionString: process.env.DB_URL?.replace(/\0/g, "").trim(),
+        user: process.env.DB_USER?.replace(/\0/g, "").trim(),
+        host: process.env.DB_HOST?.replace(/\0/g, "").trim(),
+        database: process.env.DB_NAME?.replace(/\0/g, "").trim(),
+        password: process.env.DB_PASSWORD?.replace(/\0/g, "").trim(),
+        port: parseInt(process.env.DB_PORT?.replace(/\0/g, "")) || 5432,
       },
 );
 
@@ -89,6 +108,11 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
+// Real-time Connection
+io.on("connection", (socket) => {
+  console.log("Client connected for real-time updates");
+});
+
 // Route utama agar tidak muncul "Cannot GET /"
 app.get("/", (req, res) => {
   res.send("API Website HMIF Backend is Running...");
@@ -121,66 +145,6 @@ app.post("/api/login", async (req, res) => {
     res.status(500).json({ success: false, message: "Database error" });
   }
 });
-
-// --- ENDPOINT PENGURUS ---
-
-app.get("/api/pengurus", async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
-  const offset = (page - 1) * limit;
-
-  try {
-    res.set("Cache-Control", "public, max-age=300");
-    const result = await pool.query(
-      "SELECT *, count(*) OVER() AS total_count FROM pengurus ORDER BY id_order ASC LIMIT $1 OFFSET $2",
-      [limit, offset],
-    );
-
-    const total =
-      result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
-    res.json({
-      data: result.rows.map(({ total_count, ...rest }) => rest),
-      total: total,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post(
-  "/api/pengurus",
-  authenticateToken,
-  upload.single("foto"),
-  async (req, res) => {
-    const { id, nama, jabatan, sosmed, web, id_order } = req.body;
-    const foto_path = req.file ? `/uploads/${req.file.filename}` : null;
-    try {
-      const result = await pool.query(
-        "INSERT INTO pengurus (id, nama, jabatan, foto_path, sosmed, web, id_order) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
-        [id, nama, jabatan, foto_path, sosmed, web, parseInt(id_order) || 0],
-      );
-      res.status(201).json(result.rows[0]);
-    } catch (err) {
-      console.error(err);
-      res
-        .status(500)
-        .json({
-          success: false,
-          message: "Gagal menyimpan pengurus: " + err.message,
-        });
-    }
-  },
-);
-
-app.delete("/api/pengurus/:id", authenticateToken, async (req, res) => {
-  try {
-    await pool.query("DELETE FROM pengurus WHERE id = $1", [req.params.id]);
-    res.json({ message: "Pengurus dihapus" });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-});
-
 // --- ENDPOINT PENGADUAN ---
 
 app.post(
@@ -232,6 +196,7 @@ app.post(
           file_path,
         ],
       );
+      io.emit("update_pengaduan");
       res.status(201).json(result.rows[0]);
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
@@ -239,13 +204,12 @@ app.post(
   },
 );
 
-app.get("/api/pengaduan", async (req, res) => {
+app.get("/api/pengaduan", authenticateToken, async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
 
   try {
-    res.set("Cache-Control", "private, max-age=60");
     const result = await pool.query(
       "SELECT *, count(*) OVER() AS total_count FROM pengaduan ORDER BY created_at DESC LIMIT $1 OFFSET $2",
       [limit, offset],
@@ -261,6 +225,22 @@ app.get("/api/pengaduan", async (req, res) => {
   }
 });
 
+app.delete("/api/pengaduan/:id", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query("DELETE FROM pengaduan WHERE id = $1", [
+      req.params.id,
+    ]);
+    if (result.rowCount > 0) {
+      io.emit("update_pengaduan");
+      res.json({ message: "Pengaduan dihapus" });
+    } else {
+      res.status(404).json({ message: "Pengaduan tidak ditemukan" });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // --- ENDPOINT DANA ---
 app.get("/api/dana", async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -268,7 +248,6 @@ app.get("/api/dana", async (req, res) => {
   const offset = (page - 1) * limit;
 
   try {
-    res.set("Cache-Control", "public, max-age=300");
     const result = await pool.query(
       "SELECT *, count(*) OVER() AS total_count FROM dana ORDER BY created_at DESC LIMIT $1 OFFSET $2",
       [limit, offset],
@@ -296,12 +275,29 @@ app.post(
         "INSERT INTO dana (judul, deskripsi, amount, file_path) VALUES ($1, $2, $3, $4) RETURNING *",
         [judul, deskripsi, amount, file_path],
       );
+      io.emit("update_dana");
       res.status(201).json(result.rows[0]);
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }
   },
 );
+
+app.delete("/api/dana/:id", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query("DELETE FROM dana WHERE id = $1", [
+      req.params.id,
+    ]);
+    if (result.rowCount > 0) {
+      io.emit("update_dana");
+      res.json({ message: "Data dana dihapus" });
+    } else {
+      res.status(404).json({ message: "Data dana tidak ditemukan" });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 // --- ENDPOINT BERITA ---
 app.get("/api/berita", async (req, res) => {
@@ -311,17 +307,20 @@ app.get("/api/berita", async (req, res) => {
   const offset = (page - 1) * limit;
 
   try {
-    res.set("Cache-Control", "public, max-age=300");
-    let query = "SELECT *, count(*) OVER() AS total_count FROM berita";
-    let params = [limit, offset];
+    let query = "SELECT *, count(*) OVER() AS total_count FROM berita"; // Base query
+    const queryParams = [];
+    let paramIndex = 1;
 
     if (bidang) {
-      query += " WHERE bidang = $3";
-      params.push(bidang);
+      // Add WHERE clause only if 'bidang' is provided
+      query += ` WHERE bidang = $${paramIndex++}`;
+      queryParams.push(bidang);
     }
 
-    query += " ORDER BY created_at DESC LIMIT $1 OFFSET $2";
-    const result = await pool.query(query, params);
+    query += ` ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    queryParams.push(limit, offset);
+
+    const result = await pool.query(query, queryParams);
     const total =
       result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
     res.json({
@@ -345,52 +344,8 @@ app.post(
         "INSERT INTO berita (judul, konten, bidang, file_path) VALUES ($1, $2, $3, $4) RETURNING *",
         [judul, konten, bidang, file_path],
       );
+      io.emit("update_berita");
       res.status(201).json(result.rows[0]);
-    } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
-    }
-  },
-);
-
-app.put(
-  "/api/pengurus/:id",
-  authenticateToken,
-  upload.single("foto"),
-  async (req, res) => {
-    const { id, nama, jabatan, sosmed, web, id_order } = req.body;
-    const oldId = req.params.id;
-    const foto_path = req.file ? `/uploads/${req.file.filename}` : null;
-
-    try {
-      let query, params;
-      if (foto_path) {
-        query =
-          "UPDATE pengurus SET id=$1, nama=$2, jabatan=$3, sosmed=$4, web=$5, id_order=$6, foto_path=$7 WHERE id=$8 RETURNING *";
-        params = [
-          id,
-          nama,
-          jabatan,
-          sosmed,
-          web,
-          parseInt(id_order) || 0,
-          foto_path,
-          oldId,
-        ];
-      } else {
-        query =
-          "UPDATE pengurus SET id=$1, nama=$2, jabatan=$3, sosmed=$4, web=$5, id_order=$6 WHERE id=$7 RETURNING *";
-        params = [
-          id,
-          nama,
-          jabatan,
-          sosmed,
-          web,
-          parseInt(id_order) || 0,
-          oldId,
-        ];
-      }
-      const result = await pool.query(query, params);
-      res.json(result.rows[0]);
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }
@@ -399,8 +354,15 @@ app.put(
 
 app.delete("/api/berita/:id", authenticateToken, async (req, res) => {
   try {
-    await pool.query("DELETE FROM berita WHERE id = $1", [req.params.id]);
-    res.json({ message: "Berita dihapus" });
+    const result = await pool.query("DELETE FROM berita WHERE id = $1", [
+      req.params.id,
+    ]);
+    if (result.rowCount > 0) {
+      io.emit("update_berita");
+      res.json({ message: "Berita dihapus" });
+    } else {
+      res.status(404).json({ message: "Berita tidak ditemukan" });
+    }
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -413,7 +375,6 @@ app.get("/api/buku", async (req, res) => {
   const offset = (page - 1) * limit;
 
   try {
-    res.set("Cache-Control", "public, max-age=300");
     const result = await pool.query(
       "SELECT *, count(*) OVER() AS total_count FROM buku ORDER BY created_at DESC LIMIT $1 OFFSET $2",
       [limit, offset],
@@ -441,12 +402,29 @@ app.post(
         "INSERT INTO buku (judul, penulis, file_path) VALUES ($1, $2, $3) RETURNING *",
         [judul, penulis, file_path],
       );
+      io.emit("update_buku");
       res.status(201).json(result.rows[0]);
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }
   },
 );
+
+app.delete("/api/buku/:id", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query("DELETE FROM buku WHERE id = $1", [
+      req.params.id,
+    ]);
+    if (result.rowCount > 0) {
+      io.emit("update_buku");
+      res.json({ message: "Buku dihapus" });
+    } else {
+      res.status(404).json({ message: "Buku tidak ditemukan" });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 // --- ENDPOINT PROKER ---
 app.get("/api/proker", async (req, res) => {
@@ -455,7 +433,6 @@ app.get("/api/proker", async (req, res) => {
   const offset = (page - 1) * limit;
 
   try {
-    res.set("Cache-Control", "public, max-age=300");
     const result = await pool.query(
       "SELECT *, count(*) OVER() AS total_count FROM proker ORDER BY created_at DESC LIMIT $1 OFFSET $2",
       [limit, offset],
@@ -483,12 +460,29 @@ app.post(
         "INSERT INTO proker (nama_proker, departemen_id, deskripsi, file_path) VALUES ($1, $2, $3, $4) RETURNING *",
         [nama_proker, departemen_id, deskripsi, file_path],
       );
+      io.emit("update_proker");
       res.status(201).json(result.rows[0]);
     } catch (err) {
       res.status(500).json({ success: false, message: err.message });
     }
   },
 );
+
+app.delete("/api/proker/:id", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query("DELETE FROM proker WHERE id = $1", [
+      req.params.id,
+    ]);
+    if (result.rowCount > 0) {
+      io.emit("update_proker");
+      res.json({ message: "Proker dihapus" });
+    } else {
+      res.status(404).json({ message: "Proker tidak ditemukan" });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
 // --- ENDPOINT CAROUSEL ---
 app.get("/api/carousel", async (req, res) => {
@@ -517,6 +511,7 @@ app.post(
         "INSERT INTO carousel (judul, file_path) VALUES ($1, $2) RETURNING *",
         [judul, file_path],
       );
+      io.emit("update_carousel");
       res.status(201).json(result.rows[0]);
     } catch (err) {
       res.status(500).json({ error: err.message });
@@ -526,8 +521,15 @@ app.post(
 
 app.delete("/api/carousel/:id", authenticateToken, async (req, res) => {
   try {
-    await pool.query("DELETE FROM carousel WHERE id = $1", [req.params.id]);
-    res.json({ message: "Slide carousel dihapus" });
+    const result = await pool.query("DELETE FROM carousel WHERE id = $1", [
+      req.params.id,
+    ]);
+    if (result.rowCount > 0) {
+      io.emit("update_carousel");
+      res.json({ message: "Slide carousel dihapus" });
+    } else {
+      res.status(404).json({ message: "Slide carousel tidak ditemukan" });
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -560,6 +562,64 @@ app.post("/api/stats/growth", authenticateToken, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+// --- ENDPOINT EVENTS ---
+app.get("/api/events", async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 6;
+  const offset = (page - 1) * limit;
+
+  try {
+    const result = await pool.query(
+      "SELECT *, count(*) OVER() AS total_count FROM events ORDER BY tanggal DESC, created_at DESC LIMIT $1 OFFSET $2",
+      [limit, offset],
+    );
+    const total =
+      result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
+    res.json({
+      data: result.rows.map(({ total_count, ...rest }) => rest),
+      total: total,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+app.post(
+  "/api/events",
+  authenticateToken,
+  upload.single("gambar"),
+  async (req, res) => {
+    const { judul, deskripsi, tanggal, lokasi } = req.body;
+    const file_path = req.file ? `/uploads/${req.file.filename}` : null;
+    try {
+      const result = await pool.query(
+        "INSERT INTO events (judul, deskripsi, tanggal, lokasi, file_path) VALUES ($1, $2, $3, $4, $5) RETURNING *",
+        [judul, deskripsi, tanggal, lokasi, file_path],
+      );
+      io.emit("update_events");
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      res.status(500).json({ success: false, message: err.message });
+    }
+  },
+);
+
+app.delete("/api/events/:id", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query("DELETE FROM events WHERE id = $1", [
+      req.params.id,
+    ]);
+    if (result.rowCount > 0) {
+      io.emit("update_events");
+      res.json({ message: "Event dihapus" });
+    } else {
+      res.status(404).json({ message: "Event tidak ditemukan" });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+server.listen(PORT, () => {
   console.log(`Server berjalan di http://localhost:${PORT}`);
 });

@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "api-service": "nodemon serverBackend.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -14,9 +15,9 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
-    "multer": "^2.1.1"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.14"
+    "multer": "^2.1.1",
+    "socket.io": "^4.8.3",
+    "nodemon": "^3.1.14",
+    "uuid": "^9.0.0"
   }
 }
