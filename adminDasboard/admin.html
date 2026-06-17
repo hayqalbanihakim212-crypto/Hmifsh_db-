@@ -10,6 +10,7 @@
     </script>
     <title>Dashboard Admin HMIF</title>
     <link rel="stylesheet" href="../src/style.css" />
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
   </head>
   <body>
     <header class="admin-header">
@@ -26,19 +27,6 @@
         <template id="loaderTemplate">
           <div class="loading-container">
             <div class="hmi-spinner"></div>
-          </div>
-        </template>
-
-        <template id="beritaTemplate">
-          <div class="col-md-4 mb-4 fade-in">
-            <div class="card h-100 shadow-sm admin-card">
-              <img src="" class="card-img-top" alt="Berita" />
-              <div class="card-body">
-                <h5 class="card-title text-success"></h5>
-                <p class="card-text text-truncate"></p>
-                <p class="card-text"><small class="text-muted"></small></p>
-              </div>
-            </div>
           </div>
         </template>
 
@@ -70,10 +58,35 @@
         <template id="pengaduanTemplate">
           <div class="admin-card card mb-3 fade-in">
             <div class="card-body">
-              <h6 class="subject text-success fw-bold"></h6>
-              <p class="identitas small mb-1 text-white-50"></p>
-              <p class="description card-text text-white"></p>
-              <small class="timestamp text-muted"></small>
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <h6 class="subject text-success fw-bold"></h6>
+                  <p class="identitas small mb-1 text-white-50"></p>
+                  <p class="description card-text text-white"></p>
+                  <small class="timestamp text-muted"></small>
+                </div>
+                <button class="btn btn-sm btn-danger btn-delete-pengaduan">
+                  Hapus
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Template untuk Item Event -->
+        <template id="eventTemplate">
+          <div class="admin-card card mb-3 fade-in">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <h6 class="event-judul text-success fw-bold"></h6>
+                  <p class="event-info small mb-1 text-white-50"></p>
+                  <small class="event-tanggal text-muted"></small>
+                </div>
+                <button class="btn btn-sm btn-danger btn-delete-event">
+                  Hapus
+                </button>
+              </div>
             </div>
           </div>
         </template>
@@ -91,106 +104,6 @@
             <button type="submit">Tambah ke Carousel</button>
           </form>
           <div id="carouselControlList"></div>
-        </div>
-
-        <!-- Form Tambah Pengurus -->
-        <div class="section">
-          <h2 id="pengurusFormTitle">Tambah Pengurus</h2>
-          <form id="addPengurusForm">
-            <input
-              type="text"
-              id="p_id"
-              placeholder="ID Elemen (HTML ID)"
-              required
-            />
-            <input
-              type="text"
-              id="p_nama"
-              placeholder="Nama Pengurus"
-              required
-            />
-            <input
-              type="text"
-              id="p_jabatan"
-              placeholder="Jabatan (cth: Ketua Umum)"
-              required
-            />
-            <input
-              type="text"
-              id="p_sosmed"
-              placeholder="Username Instagram/Sosmed"
-            />
-            <input type="text" id="p_web" placeholder="URL Website Personal" />
-            <label>Foto Pengurus:</label>
-            <div id="p_preview_container" style="margin-bottom: 10px">
-              <img
-                id="p_preview"
-                src=""
-                alt="Preview"
-                style="
-                  max-width: 150px;
-                  display: none;
-                  border-radius: 8px;
-                  border: 2px solid #006400;
-                  object-fit: cover;
-                "
-              />
-            </div>
-            <input type="file" id="p_foto" accept="image/*" />
-            <div class="d-flex gap-2">
-              <button type="submit" id="btnSubmitPengurus">
-                Simpan Pengurus
-              </button>
-              <button
-                type="button"
-                id="btnCancelPengurus"
-                class="btn btn-secondary"
-                style="display: none; background-color: #6c757d; color: white"
-              >
-                Batal
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <!-- Form Tambah Pengaduan -->
-        <div class="section">
-          <h2>Kirim Pengaduan</h2>
-          <form id="addPengaduanForm">
-            <input
-              type="text"
-              id="ad_identitas"
-              placeholder="Nama/Identitas"
-              required
-            />
-            <input type="number" id="ad_nim" placeholder="NIM" required />
-            <input
-              type="number"
-              id="ad_kontak"
-              placeholder="Kontak (WA)"
-              required
-            />
-            <input type="text" id="ad_jurusan" placeholder="Jurusan" required />
-            <input
-              type="text"
-              id="ad_fakultas"
-              placeholder="Fakultas"
-              required
-            />
-            <input type="text" id="ad_subject" placeholder="Subjek" required />
-            <textarea
-              id="ad_description"
-              placeholder="Deskripsi Pengaduan"
-              required
-            ></textarea>
-            <label>Upload Bukti:</label>
-            <input
-              type="file"
-              id="ad_bukti"
-              accept="image/*,video/*,application/pdf"
-            />
-            <button type="submit">Kirim Pengaduan</button>
-          </form>
         </div>
 
         <!-- Section Upload Dana -->
@@ -223,7 +136,7 @@
             ></textarea>
             <select id="b_bidang" required>
               <option value="" disabled selected>Pilih Bidang Berita</option>
-              <option value="">Berita Umum</option>
+              <option value="Umum">Berita Umum</option>
               <option value="AK">Administrasi & Kesekretariatan</option>
               <option value="PPPA">PPPA (Penelitian & Pembinaan)</option>
               <option value="PTKP">PTKP</option>
@@ -268,12 +181,17 @@
               placeholder="Nama Proker"
               required
             />
-            <input
-              type="text"
-              name="departemen_id"
-              placeholder="ID Departemen"
-              required
-            />
+            <select name="departemen_id" required>
+              <option value="" disabled selected>
+                Pilih Bidang/Departemen
+              </option>
+              <option value="AK">Administrasi & Kesekretariatan (AK)</option>
+              <option value="KP">Keuangan & Perlengkapan (KP)</option>
+              <option value="PPPA">PPPA (Penelitian & Pembinaan)</option>
+              <option value="PTKP">PTKP</option>
+              <option value="KPP">Kewirausahaan (KPP)</option>
+              <option value="PP">Pemberdayaan Perempuan (PP)</option>
+            </select>
             <textarea
               name="deskripsi"
               placeholder="Deskripsi Proker"
@@ -282,6 +200,30 @@
             <button type="submit">Upload Proker</button>
           </form>
           <div id="prokerList"></div>
+        </div>
+
+        <!-- Section Upload Event -->
+        <div class="section">
+          <h2>Upload Event</h2>
+          <form id="addEventForm">
+            <input
+              type="text"
+              name="judul"
+              placeholder="Judul Event"
+              required
+            />
+            <textarea name="deskripsi" placeholder="Deskripsi Event"></textarea>
+            <input type="date" name="tanggal" required />
+            <input
+              type="text"
+              name="lokasi"
+              placeholder="Lokasi Event"
+              required
+            />
+            <input type="file" name="gambar" accept="image/*" />
+            <button type="submit">Upload Event</button>
+          </form>
+          <div id="eventList"></div>
         </div>
 
         <!-- Section Update Data Grafik Pertumbuhan -->
@@ -302,21 +244,6 @@
           </p>
         </div>
 
-        <!-- Tabel Control Pengurus -->
-        <div class="section">
-          <h2>Daftar Pengurus</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Nama</th>
-                <th>ID</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="pengurusControl"></tbody>
-          </table>
-        </div>
-
         <!-- List Pengaduan -->
         <div class="section">
           <h2>Daftar Pengaduan Masuk</h2>
@@ -325,6 +252,6 @@
       </div>
     </main>
 
-    <script src="../adminDasboard/admin.js"></script>
+    <script src="admin.js"></script>
   </body>
 </html>

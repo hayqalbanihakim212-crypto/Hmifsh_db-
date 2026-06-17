@@ -1,6 +1,20 @@
 const API_URL = "http://localhost:3000/api";
 const token = localStorage.getItem("adminToken");
-let editingPengurusId = null;
+const socket = typeof io !== "undefined" ? io("http://localhost:3000") : null;
+
+// Inisialisasi Sinkronisasi Real-time
+if (socket) {
+  socket.on("update_berita", () => {
+    const filter = document.getElementById("filterKategoriBerita")?.value || "";
+    fetchBerita(filter);
+  });
+  socket.on("update_carousel", () => fetchCarouselControl());
+  socket.on("update_dana", () => fetchDana());
+  socket.on("update_buku", () => fetchBuku());
+  socket.on("update_proker", () => fetchProker());
+  socket.on("update_events", () => fetchEvents());
+  socket.on("update_pengaduan", () => fetchPengaduan());
+}
 
 // Fungsi Logout
 function logout() {
@@ -31,47 +45,6 @@ function showToast(message, type = "success") {
     setTimeout(() => toast.remove(), 500);
   }, 4000);
 }
-
-// Fetch Data Pengurus
-async function fetchPengurus() {
-  try {
-    const container = document.getElementById("pengurusControl");
-    const template = document.getElementById("tableRowTemplate");
-    const loaderTemplate = document.getElementById("loaderTemplate");
-
-    container.innerHTML = '<tr><td colspan="3" class="text-center"></td></tr>';
-    container
-      .querySelector("td")
-      .appendChild(loaderTemplate.content.cloneNode(true));
-
-    const response = await fetch(`${API_URL}/pengurus`);
-    const result = await response.json();
-    const data = Array.isArray(result.data)
-      ? result.data
-      : Array.isArray(result)
-        ? result
-        : [];
-
-    container.innerHTML = "";
-    data.forEach((p) => {
-      const clone = template.content.cloneNode(true);
-      clone.querySelector(".col-nama").textContent = p.nama || "Tanpa Nama";
-      clone.querySelector(".col-info").textContent = p.id || "-";
-      const btn = clone.querySelector(".btn-delete");
-
-      const btnEdit = clone.querySelector(".btn-edit");
-      if (btnEdit) btnEdit.onclick = () => prepareEditPengurus(p);
-
-      btn.className = "btn btn-sm btn-danger";
-      btn.onclick = () => deletePengurus(p.id);
-      container.appendChild(clone);
-    });
-  } catch (err) {
-    console.error("Gagal fetch pengurus:", err);
-    showToast("Gagal memuat data pengurus", "error");
-  }
-}
-
 async function addBerita(e) {
   e.preventDefault();
   const formData = new FormData();
@@ -87,10 +60,11 @@ async function addBerita(e) {
   const bidangVal = document.getElementById("b_bidang").value;
   formData.append("bidang", bidangVal || "Umum");
 
-  formData.append(
-    "gambar",
-    document.querySelector("#addBeritaForm input[type='file']").files[0],
-  );
+  const fileInput = document.querySelector("#addBeritaForm input[type='file']")
+    .files[0];
+  if (fileInput) {
+    formData.append("gambar", fileInput);
+  }
 
   try {
     const response = await fetch(`${API_URL}/berita`, {
@@ -104,8 +78,7 @@ async function addBerita(e) {
 
     if (response.ok) {
       showToast("Berita berhasil diupload");
-      e.target.reset();
-      fetchBerita();
+      e.target.reset(); // Sinyal socket akan memicu fetchBerita
     } else {
       if (response.status === 403 || response.status === 401) {
         showToast("Sesi berakhir, silakan login kembali", "error");
@@ -133,14 +106,15 @@ async function fetchCarouselControl() {
   try {
     const response = await fetch(`${API_URL}/carousel`);
     const data = await response.json();
+    const list = Array.isArray(data) ? data : data.data || [];
 
     container.innerHTML = "";
-    if (Array.isArray(data)) {
-      data.forEach((item) => {
+    if (list.length > 0) {
+      list.forEach((item) => {
         const clone = template.content.cloneNode(true);
         clone.querySelector(".slide-title").textContent =
           item.judul || "Tanpa Judul";
-        const btn = clone.querySelector(".btn-delete-carousel");
+        const btn = clone.querySelector(".btn-delete-carousel"); // Calls the standalone function
         btn.onclick = () => deleteCarousel(item.id);
         container.appendChild(clone);
       });
@@ -152,10 +126,13 @@ async function fetchCarouselControl() {
 
 async function deleteCarousel(id) {
   if (!confirm("Hapus slide carousel ini?")) return;
-  const response = await fetch(`${API_URL}/carousel/${id}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const response = await fetch(
+    `${API_URL}/carousel/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
   if (response.ok) {
     showToast("Slide berhasil dihapus");
     fetchCarouselControl();
@@ -166,7 +143,8 @@ async function addCarousel(e) {
   e.preventDefault();
   const formData = new FormData();
   formData.append("judul", document.getElementById("c_judul").value);
-  formData.append("gambar", document.getElementById("c_gambar").files[0]);
+  const fileInput = document.getElementById("c_gambar").files[0];
+  if (fileInput) formData.append("gambar", fileInput);
 
   const response = await fetch(`${API_URL}/carousel`, {
     method: "POST",
@@ -177,7 +155,6 @@ async function addCarousel(e) {
   if (response.ok) {
     showToast("Slide carousel ditambahkan");
     e.target.reset();
-    fetchCarouselControl();
   } else if (response.status === 403 || response.status === 401) {
     showToast("Sesi berakhir", "error");
     logout();
@@ -192,65 +169,35 @@ async function fetchBerita(bidang = "") {
     const template = document.getElementById("tableRowTemplate");
     if (!container) return;
 
-    container.innerHTML = "<tr><td colspan='3'>Memuat...</td></tr>";
+    container.innerHTML = '<tr><td colspan="3">Memuat...</td></tr>';
 
-    const response = await fetch(`${API_URL}/berita?limit=50&bidang=${bidang}`);
+    let url = `${API_URL}/berita?limit=50`;
+    if (bidang) {
+      // Hanya tambahkan parameter bidang jika tidak kosong
+      url += `&bidang=${bidang}`;
+    }
+
+    const response = await fetch(url);
     const result = await response.json();
     const data = result.data || [];
 
     container.innerHTML = "";
     data.forEach((b) => {
+      // Pastikan data adalah array
       const clone = template.content.cloneNode(true);
       clone.querySelector(".col-nama").textContent = b.judul;
       clone.querySelector(".col-info").textContent = b.bidang || "Umum";
       const btn = clone.querySelector(".btn-delete");
-      btn.className = "btn btn-sm btn-danger";
+      btn.className = "btn btn-sm btn-danger btn-delete";
       btn.onclick = () => deleteBerita(b.id);
       container.appendChild(clone);
     });
+    if (data.length === 0)
+      container.innerHTML =
+        '<tr><td colspan="3">Tidak ada berita ditemukan.</td></tr>';
   } catch (err) {
     console.error("Gagal fetch berita:", err);
   }
-}
-
-function prepareEditPengurus(p) {
-  editingPengurusId = p.id || p.p_id;
-  document.getElementById("p_id").value = p.id || p.p_id;
-  document.getElementById("p_nama").value = p.nama || p.p_nama;
-  document.getElementById("p_jabatan").value = p.jabatan || "";
-  document.getElementById("p_sosmed").value = p.sosmed || "";
-  document.getElementById("p_web").value = p.web || "";
-
-  // Tampilkan preview foto yang sudah ada di database saat edit
-  const preview = document.getElementById("p_preview");
-  if (p.foto_path) {
-    preview.src = `http://localhost:3000${p.foto_path}`;
-    preview.style.display = "block";
-  }
-
-  document.getElementById("pengurusFormTitle").innerText = "Edit Pengurus";
-  document.getElementById("btnSubmitPengurus").innerText = "Update Pengurus";
-  document.getElementById("btnCancelPengurus").style.display = "block";
-
-  window.scrollTo({
-    top: document.getElementById("addPengurusForm").offsetTop - 100,
-    behavior: "smooth",
-  });
-}
-
-function resetPengurusForm() {
-  editingPengurusId = null;
-  document.getElementById("addPengurusForm").reset();
-  // Reset preview gambar
-  const preview = document.getElementById("p_preview");
-  if (preview) {
-    preview.src = "";
-    preview.style.display = "none";
-  }
-
-  document.getElementById("pengurusFormTitle").innerText = "Tambah Pengurus";
-  document.getElementById("btnSubmitPengurus").innerText = "Simpan Pengurus";
-  document.getElementById("btnCancelPengurus").style.display = "none";
 }
 
 // Listener untuk preview foto saat memilih file baru
@@ -263,88 +210,19 @@ document.getElementById("p_foto")?.addEventListener("change", (e) => {
   }
 });
 
-document
-  .getElementById("btnCancelPengurus")
-  ?.addEventListener("click", resetPengurusForm);
-
-async function deletePengurus(id) {
-  if (!confirm("Yakin ingin menghapus pengurus ini?")) return;
-  const response = await fetch(`${API_URL}/pengurus/${id}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  if (response.ok) {
-    showToast("Data pengurus berhasil dihapus");
-    fetchPengurus();
-  } else {
-    showToast("Gagal menghapus data", "error");
-  }
-}
-
 // Simpan Pengurus
-document
-  .getElementById("addPengurusForm")
-  .addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    submitBtn.disabled = true;
-    submitBtn.innerText = "Menyimpan...";
-
-    const formData = new FormData();
-    formData.append("id", document.getElementById("p_id").value);
-    formData.append("nama", document.getElementById("p_nama").value);
-    formData.append("jabatan", document.getElementById("p_jabatan").value);
-    formData.append("sosmed", document.getElementById("p_sosmed").value);
-    formData.append("web", document.getElementById("p_web").value);
-    formData.append("id_order", 0);
-    formData.append("foto", document.getElementById("p_foto").files[0]);
-
-    const url = editingPengurusId
-      ? `${API_URL}/pengurus/${editingPengurusId}`
-      : `${API_URL}/pengurus`;
-    const method = editingPengurusId ? "PUT" : "POST";
-
-    const response = await fetch(url, {
-      method: method,
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
-
-    if (response.ok) {
-      showToast(editingPengurusId ? "Data diperbarui!" : "Data disimpan!");
-      resetPengurusForm();
-      fetchPengurus();
-    } else {
-      if (response.status === 403 || response.status === 401) {
-        showToast("Sesi berakhir, silakan login kembali", "error");
-        logout();
-        return;
-      }
-      let errorMessage = "Server Error";
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || errorMessage;
-      } catch (e) {
-        errorMessage = await response.text();
-      }
-      showToast(`Gagal: ${errorMessage}`, "error");
-    }
-    submitBtn.disabled = false;
-    submitBtn.innerText = "Simpan Pengurus";
-  });
+// Di dalam window.onload saja agar aman
 
 // Fetch Berita with Filtering
 async function deleteBerita(id) {
   if (!confirm("Yakin ingin menghapus berita ini?")) return;
-  const response = await fetch(`${API_URL}/berita/${id}`, {
+  const response = await fetch(`${API_URL}/berita/${encodeURIComponent(id)}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   });
   if (response.ok) {
     showToast("Berita berhasil dihapus");
-    fetchBerita(document.getElementById("filterKategoriBerita")?.value || "");
+    fetchBerita();
   } else {
     showToast("Gagal menghapus berita", "error");
   }
@@ -375,10 +253,44 @@ async function fetchPengaduan() {
       clone.querySelector(".timestamp").textContent = new Date(
         ad.created_at,
       ).toLocaleString();
+
+      const btnDelete = clone.querySelector(".btn-delete-pengaduan");
+      if (btnDelete) {
+        btnDelete.onclick = () => deletePengaduan(ad.id);
+      }
+
       container.appendChild(clone);
     });
   } catch (err) {
     console.error("Gagal fetch pengaduan:", err);
+  }
+}
+
+async function deletePengaduan(id) {
+  if (!confirm("Yakin ingin menghapus pengaduan ini?")) return;
+  const response = await fetch(
+    `${API_URL}/pengaduan/${encodeURIComponent(id)}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+  if (response.ok) {
+    showToast("Pengaduan berhasil dihapus");
+    fetchPengaduan(); // Tambahkan refresh data
+  } else {
+    showToast("Gagal menghapus pengaduan", "error");
+    if (response.status === 403 || response.status === 401) {
+      showToast("Sesi berakhir, silakan login kembali", "error");
+      logout();
+    } else if (response.status === 404) {
+      showToast("Pengaduan tidak ditemukan", "error");
+    } else {
+      showToast(
+        `Gagal menghapus pengaduan: ${response.statusText || "Terjadi kesalahan"}`,
+        "error",
+      );
+    }
   }
 }
 
@@ -389,12 +301,20 @@ async function fetchDana() {
     const data = result.data || [];
     const container = document.getElementById("danaList");
     if (container) {
-      container.innerHTML = data
-        .map(
-          (d) =>
-            `<div class="p-2 mb-1 border-bottom text-dark" style="background:#fff; border-radius:4px;">${d.judul} - Rp${d.amount}</div>`,
-        )
-        .join("");
+      container.innerHTML = "";
+      data.forEach((d) => {
+        const div = document.createElement("div");
+        div.className =
+          "d-flex justify-content-between align-items-center p-2 mb-1 border rounded bg-white text-dark";
+        const info = document.createElement("span");
+        info.textContent = `${d.judul} - Rp${Number(d.amount || 0).toLocaleString("id-ID")}`;
+        const btn = document.createElement("button");
+        btn.className = "btn btn-sm btn-danger";
+        btn.textContent = "Hapus";
+        btn.onclick = () => deleteDana(d.id);
+        div.append(info, btn);
+        container.appendChild(div);
+      });
     }
   } catch (err) {
     console.error("Gagal fetch dana:", err);
@@ -403,7 +323,14 @@ async function fetchDana() {
 
 async function addDana(e) {
   e.preventDefault();
-  const formData = new FormData(e.target);
+  const form = e.target;
+  const formData = new FormData();
+  formData.append("judul", form.querySelector('[name="judul"]').value);
+  formData.append("deskripsi", form.querySelector('[name="deskripsi"]').value);
+  formData.append("amount", form.querySelector('[name="amount"]').value);
+  const fileInput = form.querySelector('[name="file"]').files[0];
+  if (fileInput) formData.append("file", fileInput);
+
   try {
     const response = await fetch(`${API_URL}/dana`, {
       method: "POST",
@@ -413,7 +340,6 @@ async function addDana(e) {
     if (response.ok) {
       showToast("Data Dana berhasil diupload");
       e.target.reset();
-      fetchDana();
     } else if (response.status === 403 || response.status === 401) {
       showToast("Sesi berakhir", "error");
       logout();
@@ -425,6 +351,37 @@ async function addDana(e) {
   }
 }
 
+// Delete Dana
+async function deleteDana(id) {
+  if (!confirm("Hapus data dana ini?")) return;
+  try {
+    const response = await fetch(`${API_URL}/dana/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (response.ok) {
+      showToast("Dana berhasil dihapus");
+      fetchDana(); // Tambahkan refresh data
+    } else if (response.status === 404) {
+      showToast("Data dana tidak ditemukan", "error");
+    } else if (response.status === 403 || response.status === 401) {
+      showToast("Sesi berakhir, silakan login kembali", "error");
+      logout();
+    } else {
+      let errorMessage = "Gagal menghapus dana";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        errorMessage = `Gagal menghapus dana: ${response.statusText}`;
+      }
+      showToast(errorMessage, "error");
+    }
+  } catch (err) {
+    console.error("Network error during delete:", err);
+    showToast("Kesalahan jaringan saat menghapus dana.", "error");
+  }
+}
 async function fetchBuku() {
   try {
     const response = await fetch(`${API_URL}/buku`);
@@ -432,12 +389,31 @@ async function fetchBuku() {
     const data = result.data || [];
     const container = document.getElementById("bukuList");
     if (container) {
-      container.innerHTML = data
-        .map(
-          (b) =>
-            `<div class="p-2 mb-1 border-bottom text-dark" style="background:#fff; border-radius:4px;">${b.judul} (${b.penulis})</div>`,
-        )
-        .join("");
+      container.innerHTML = "";
+      data.forEach((b) => {
+        const div = document.createElement("div");
+        div.className =
+          "d-flex justify-content-between align-items-center p-2 mb-1 border rounded bg-white text-dark";
+
+        const info = document.createElement("span");
+        info.textContent = `${b.judul} (${b.penulis || "Tanpa Penulis"})`;
+
+        const actions = document.createElement("div");
+        actions.className = "d-flex gap-1";
+
+        if (b.file_path) {
+          actions.innerHTML += `<a href="http://localhost:3000${b.file_path}" target="_blank" class="btn btn-sm btn-info">Lihat</a>`;
+        }
+
+        const btn = document.createElement("button");
+        btn.className = "btn btn-sm btn-danger";
+        btn.textContent = "Hapus";
+        btn.onclick = () => deleteBuku(b.id);
+
+        actions.appendChild(btn);
+        div.append(info, actions);
+        container.appendChild(div);
+      });
     }
   } catch (err) {
     console.error("Gagal fetch buku:", err);
@@ -446,7 +422,13 @@ async function fetchBuku() {
 
 async function addBuku(e) {
   e.preventDefault();
-  const formData = new FormData(e.target);
+  const form = e.target;
+  const formData = new FormData();
+  formData.append("judul", form.querySelector('[name="judul"]').value);
+  formData.append("penulis", form.querySelector('[name="penulis"]').value);
+  const fileInput = form.querySelector('[name="file"]').files[0];
+  if (fileInput) formData.append("file", fileInput);
+
   try {
     const response = await fetch(`${API_URL}/buku`, {
       method: "POST",
@@ -456,7 +438,6 @@ async function addBuku(e) {
     if (response.ok) {
       showToast("Buku berhasil diupload");
       e.target.reset();
-      fetchBuku();
     } else if (response.status === 403 || response.status === 401) {
       showToast("Sesi berakhir", "error");
       logout();
@@ -467,6 +448,17 @@ async function addBuku(e) {
     showToast("Kesalahan jaringan", "error");
   }
 }
+async function deleteBuku(id) {
+  if (!confirm("Hapus buku ini?")) return;
+  const response = await fetch(`${API_URL}/buku/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (response.ok) {
+    showToast("Buku berhasil dihapus");
+    fetchBuku();
+  } else showToast("Gagal menghapus buku", "error");
+}
 
 async function fetchProker() {
   try {
@@ -475,12 +467,23 @@ async function fetchProker() {
     const data = result.data || [];
     const container = document.getElementById("prokerList");
     if (container) {
-      container.innerHTML = data
-        .map(
-          (p) =>
-            `<div class="p-2 mb-1 border-bottom text-dark" style="background:#fff; border-radius:4px;">${p.nama_proker} [${p.departemen_id}]</div>`,
-        )
-        .join("");
+      container.innerHTML = "";
+      data.forEach((p) => {
+        const div = document.createElement("div");
+        div.className =
+          "d-flex justify-content-between align-items-center p-2 mb-1 border rounded bg-white text-dark";
+
+        const info = document.createElement("span");
+        info.textContent = `${p.nama_proker} [${p.departemen_id}]`;
+
+        const btn = document.createElement("button");
+        btn.className = "btn btn-sm btn-danger";
+        btn.textContent = "Hapus";
+        btn.onclick = () => deleteProker(p.id);
+
+        div.append(info, btn);
+        container.appendChild(div);
+      });
     }
   } catch (err) {
     console.error("Gagal fetch proker:", err);
@@ -489,7 +492,20 @@ async function fetchProker() {
 
 async function addProker(e) {
   e.preventDefault();
-  const formData = new FormData(e.target);
+  const form = e.target;
+  const formData = new FormData();
+  formData.append(
+    "nama_proker",
+    form.querySelector('[name="nama_proker"]').value,
+  );
+  formData.append(
+    "departemen_id",
+    form.querySelector('[name="departemen_id"]').value,
+  );
+  formData.append("deskripsi", form.querySelector('[name="deskripsi"]').value);
+  const fileInput = form.querySelector('[name="gambar"]').files[0];
+  if (fileInput) formData.append("gambar", fileInput);
+
   try {
     const response = await fetch(`${API_URL}/proker`, {
       method: "POST",
@@ -499,7 +515,6 @@ async function addProker(e) {
     if (response.ok) {
       showToast("Proker berhasil diupload");
       e.target.reset();
-      fetchProker();
     } else if (response.status === 403 || response.status === 401) {
       showToast("Sesi berakhir", "error");
       logout();
@@ -511,37 +526,128 @@ async function addProker(e) {
   }
 }
 
-async function addPengaduan(e) {
+async function fetchEvents() {
+  const container = document.getElementById("eventList");
+  const template = document.getElementById("eventTemplate");
+  if (!container || !template) return;
+  try {
+    const response = await fetch(`${API_URL}/events`);
+    const result = await response.json();
+    const data = result.data || [];
+    container.innerHTML = "";
+    data.forEach((ev) => {
+      const clone = template.content.cloneNode(true);
+      clone.querySelector(".event-judul").textContent = ev.judul;
+      clone.querySelector(".event-info").textContent = ev.lokasi;
+      clone.querySelector(".event-tanggal").textContent = new Date(
+        ev.tanggal,
+      ).toLocaleDateString("id-ID");
+      clone.querySelector(".btn-delete-event").onclick = () =>
+        deleteEvent(ev.id);
+      container.appendChild(clone);
+    });
+  } catch (err) {
+    console.error("Gagal fetch events:", err);
+  }
+}
+
+async function addEvent(e) {
   e.preventDefault();
+  const form = e.target;
   const formData = new FormData();
-  formData.append("identitas", document.getElementById("ad_identitas").value);
-  formData.append("nim", document.getElementById("ad_nim").value);
-  formData.append("kontak", document.getElementById("ad_kontak").value);
-  formData.append("jurusan", document.getElementById("ad_jurusan").value);
-  formData.append("fakultas", document.getElementById("ad_fakultas").value);
-  formData.append("subject", document.getElementById("ad_subject").value);
-  formData.append(
-    "description",
-    document.getElementById("ad_description").value,
-  );
-  formData.append("bukti", document.getElementById("ad_bukti").files[0]);
+  formData.append("judul", form.querySelector('[name="judul"]').value);
+  formData.append("deskripsi", form.querySelector('[name="deskripsi"]').value);
+  formData.append("tanggal", form.querySelector('[name="tanggal"]').value);
+  formData.append("lokasi", form.querySelector('[name="lokasi"]').value);
+  const fileInput = form.querySelector('[name="gambar"]').files[0];
+  if (fileInput) formData.append("gambar", fileInput);
 
   try {
-    const response = await fetch(`${API_URL}/pengaduan`, {
+    const response = await fetch(`${API_URL}/events`, {
       method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
       body: formData,
     });
     if (response.ok) {
-      showToast("Pengaduan berhasil dikirim");
+      showToast("Event berhasil ditambahkan");
       e.target.reset();
-      fetchPengaduan();
     } else {
-      showToast("Gagal kirim pengaduan", "error");
+      showToast("Gagal menambah event", "error");
     }
   } catch (err) {
     showToast("Kesalahan jaringan", "error");
   }
 }
+
+async function deleteEvent(id) {
+  if (!confirm("Hapus event ini?")) return;
+  try {
+    const response = await fetch(
+      `${API_URL}/events/${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    if (response.ok) {
+      showToast("Event berhasil dihapus");
+      fetchEvents(); // Tambahkan refresh data
+    } else {
+      showToast("Gagal menghapus event", "error");
+    }
+  } catch (err) {
+    showToast("Kesalahan jaringan", "error");
+  }
+}
+
+async function deleteProker(id) {
+  if (!confirm("Hapus proker ini?")) return;
+  if (!token) {
+    showToast("Sesi admin habis, silakan login ulang", "error");
+    logout();
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `${API_URL}/proker/${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+
+    if (response.ok) {
+      showToast("Proker berhasil dihapus");
+      fetchProker();
+      return;
+    }
+
+    if (response.status === 404) {
+      showToast("Proker tidak ditemukan", "error");
+      return;
+    }
+
+    if (response.status === 403 || response.status === 401) {
+      showToast("Sesi berakhir, silakan login kembali", "error");
+      logout();
+      return;
+    }
+
+    let errorMessage = "Gagal menghapus proker";
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorData.error || errorMessage;
+    } catch (e) {
+      errorMessage = `Gagal menghapus proker: ${response.statusText}`;
+    }
+    showToast(errorMessage, "error");
+  } catch (err) {
+    console.error("Network error during delete:", err);
+    showToast("Kesalahan jaringan saat menghapus proker.", "error");
+  }
+}
+// addPengaduan di admin.js dihapus karena form tidak ada di admin.html
 
 document
   .getElementById("updateGrowthForm")
@@ -583,17 +689,17 @@ window.onload = async () => {
     document.getElementById("addBukuForm").onsubmit = addBuku;
   if (document.getElementById("addProkerForm"))
     document.getElementById("addProkerForm").onsubmit = addProker;
-  if (document.getElementById("addPengaduanForm"))
-    document.getElementById("addPengaduanForm").onsubmit = addPengaduan;
+  if (document.getElementById("addEventForm"))
+    document.getElementById("addEventForm").onsubmit = addEvent;
 
   // Jalankan fetch data secara terpisah agar tidak saling mengunci
-  fetchPengurus();
   fetchPengaduan();
   fetchBerita();
   fetchCarouselControl();
   fetchDana();
   fetchBuku();
   fetchProker();
+  fetchEvents(); // Fetch events on load
 };
 
 // Event listener untuk filter kategori

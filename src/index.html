@@ -7,21 +7,17 @@
     <link
       href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
       rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
     />
-    <title>HmiFsh Uinsu</title>
-    <!-- Load React & Charting Library via CDN -->
+    <title>Home - HmiFsh Uinsu</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="http://localhost:3000/socket.io/socket.io.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   </head>
   <body class="indexHome">
-    <!-- Background Layers -->
-    <div class="bg-base"></div>
-    <div id="bg-slide-2" class="dynamic-bg"></div>
-    <div id="bg-slide-1" class="dynamic-bg"></div>
-    <div id="bg-slide-4" class="dynamic-bg"></div>
-
-    <nav class="navbar navbar-expand-lg navbar-hmi">
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-hmi sticky-top">
       <div class="container">
         <img
           src="../strukturan.png/HMIKOHATIlogo.png"
@@ -56,17 +52,10 @@
       </div>
     </nav>
 
-    <div class="bottom-sheet" id="bottomSheet">
-      <div class="drag-handle" id="dragHandle">
-        <div class="arrow" id="arrowIcon"></div>
-        <div class="line"></div>
-      </div>
-    </div>
-
     <main class="container mt-4">
       <div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
         <div class="carousel-inner" id="carouselData">
-          <!-- Diisi otomatis oleh loadCarousel() di script.js -->
+          <!-- Diisi otomatis oleh loadCarousel() -->
         </div>
         <button
           class="carousel-control-prev"
@@ -87,125 +76,217 @@
           <span class="visually-hidden">Next</span>
         </button>
       </div>
-      <section class="mt-5">
-        <h2 class="title">Berita Terbaru</h2>
-        <div class="row" id="beritaContainer"></div>
-      </section>
 
-      <!-- Container untuk React Component (Grafik Pertumbuhan) -->
-      <section class="mt-5 section">
-        <h2 class="title">Statistik Pertumbuhan Organisasi</h2>
-        <div id="growth-chart-root"></div>
-      </section>
+      <div class="row mt-5">
+        <main class="col-lg-8" role="main">
+          <article class="mt-2">
+            <h4 class="title">Berita Terbaru</h4>
+            <div class="row" id="beritaContainer"></div>
+          </article>
+          <article class="mt-4">
+            <h4 class="title">Event Mendatang</h4>
+            <div class="row" id="eventContainer"></div>
+          </article>
 
-      <section class="mt-5">
-        <h2 class="title">Event</h2>
-        <div class="row" id="eventContainer"></div>
-      </section>
-      <section class="mt-5">
-        <h2 class="title">Pengumuman</h2>
-        <div class="row" id="pengumumanContainer"></div>
-      </section>
+          <section class="mt-5 section">
+            <h2 class="title">Perpustakaan & Buku Panduan</h2>
+            <div class="row" id="bukuContainer"></div>
+          </section>
+        </main>
 
-      <div class="menu-content">
-        <div class="welcome-section reveal">
-          <h3 class="welcome-title">
-            Strukturan HMI Komisariat Fakultas Syari'ah dan Hukum Universitas
-            Islam Negeri Sumatera Utara
-          </h3>
-          <p class="welcome-year">Periode Tahun 2026-2028</p>
+        <aside class="col-lg-4">
+          <div class="card">
+            <div class="card-body">
+              <h6 class="card-title text-success">
+                Statistik Pertumbuhan Organisasi
+              </h6>
+              <div
+                id="growth-chart-root-sidebar"
+                style="height: 200px; width: 100%"
+              ></div>
+            </div>
+          </div>
+
+          <div class="card" id="danaInfoContainer">
+            <!-- Informasi Dana akan dimuat di sini oleh JavaScript -->
+          </div>
+
+          <!-- Kontak Bantuan Sidebar -->
+          <div class="card" id="helpContactSidebar">
+            <div class="card-body">
+              <h6 class="card-title text-success">Kontak Bantuan</h6>
+              <div class="small text-muted mb-3">
+                <p class="mb-1"><strong>WhatsApp:</strong> +62 812 3456 7890</p>
+                <p class="mb-0"><strong>Instagram:</strong> @hmi_fsh_uinsu</p>
+              </div>
+              <a
+                href="contact.html"
+                class="btn btn-sm btn-outline-success w-100"
+              >
+                Hubungi Kami
+              </a>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Templates for JS -->
+
+      <template id="loaderTemplate">
+        <div class="loading-container text-center my-4">
+          <div class="spinner-border text-success" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
         </div>
-        <section class="umuman" id="pengurusContainer"></section>
+      </template>
 
-        <section class="containerDepartemen">
-          <div class="containerCardD1">
-            <div class="card">
-              <div class="card-body">
-                <h5 class="title">Bidang Pemberdayaan Perempuan</h5>
-                <a class="btn" href="../programKerja/prokerPP.html"
-                  >Tinjau Progres</a
-                >
-              </div>
+      <template id="beritaTemplate">
+        <div class="col-md-4 mb-4 fade-in">
+          <div class="card h-100 shadow-sm">
+            <img
+              src=""
+              class="card-img-top"
+              loading="lazy"
+              alt="Berita"
+              style="height: 200px; object-fit: cover"
+            />
+            <div class="card-body">
+              <h5
+                class="card-title text-success"
+                style="
+                  font-family: &quot;Times New Roman&quot;, serif;
+                  font-weight: bold;
+                "
+              ></h5>
+              <p
+                class="card-text text-truncate"
+                style="color: rgba(255, 255, 255, 0.9)"
+              ></p>
+              <p class="card-text"><small class="text-muted"></small></p>
             </div>
           </div>
+        </div>
+      </template>
+
+      <template id="bukuTemplate">
+        <div class="col-md-3 mb-4">
+          <div class="card h-100 shadow-sm border-success">
+            <div class="card-body text-center d-flex flex-column">
+              <h6
+                class="card-title text-success font-weight-bold book-title"
+              ></h6>
+              <p class="card-text small text-muted mb-3 book-author"></p>
+              <a
+                href=""
+                class="btn btn-sm btn-outline-success mt-auto book-link"
+                target="_blank"
+                >Unduh / Baca</a
+              >
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- Struktur dan Bagian Section (Dipindahkan ke Bawah) -->
+      <section class="welcome-section mt-5 reveal">
+        <h1 class="welcome-title">Struktur dan Bagian</h1>
+        <div id="departemenSection" class="containerDepartemen mt-4">
           <div class="containerCardD2">
-            <div class="card">
+            <a
+              href="../programKerja/prokerAK.html"
+              class="card text-decoration-none"
+            >
               <div class="card-body">
-                <h5 class="title">Bidang Administrasi & Kesekretariat</h5>
-                <a class="btn" href="../programKerja/prokerAK.html"
-                  >Tinjau Progres</a
-                >
+                <button class="btn mt-auto">
+                  Administrasi & Kesekretariatan
+                </button>
               </div>
-            </div>
-          </div>
-          <div class="containerCardD3">
-            <div class="card">
-              <div class="card-body">
-                <h5 class="title">
-                  Bidang Penelitian Pengembangan & Pembinaan Anggota
-                </h5>
-                <a class="btn" href="../programKerja/prokerPPPA.html"
-                  >Tinjau Progres</a
-                >
-              </div>
-            </div>
-          </div>
-          <div class="containerCardD4">
-            <div class="card">
-              <div class="card-body">
-                <h5 class="title">
-                  Bidang Perguruan Tinggi Kemahasiswaan & Pemuda
-                </h5>
-                <a class="btn" href="../programKerja/prokerPTKP.html"
-                  >Tinjau Progres</a
-                >
-              </div>
-            </div>
-          </div>
-          <div class="containerCardD5">
-            <div class="card">
-              <div class="card-body">
-                <h5 class="title">Bidang Kewirausahaan Pengembangan Profesi</h5>
-                <a class="btn" href="../programKerja/prokerKPP.html"
-                  >Tinjau Progres</a
-                >
-              </div>
-            </div>
+            </a>
           </div>
           <div class="containerCardD6">
-            <div class="card">
+            <a
+              href="../programKerja/prokerKP.html"
+              class="card text-decoration-none"
+            >
               <div class="card-body">
-                <h5 class="title">Bidang Keuangan & Perlengkapan</h5>
-                <a class="btn" href="../programKerja/prokerKP.html"
-                  >Tinjau Progres</a
-                >
+                <button class="btn mt-auto">Keuangan & Perlengkapan</button>
               </div>
-            </div>
+            </a>
           </div>
-        </section>
-      </div>
+          <div class="containerCardD3">
+            <a
+              href="../programKerja/prokerPPPA.html"
+              class="card text-decoration-none"
+            >
+              <div class="card-body">
+                <button class="btn mt-auto">PPPA</button>
+              </div>
+            </a>
+          </div>
+          <div class="containerCardD4">
+            <a
+              href="../programKerja/prokerPTKP.html"
+              class="card text-decoration-none"
+            >
+              <div class="card-body">
+                <button class="btn mt-auto">PTKP</button>
+              </div>
+            </a>
+          </div>
+          <div class="containerCardD5">
+            <a
+              href="../programKerja/prokerKPP.html"
+              class="card text-decoration-none"
+            >
+              <div class="card-body">
+                <button class="btn mt-auto">Kewirausahaan (KPP)</button>
+              </div>
+            </a>
+          </div>
+          <div class="containerCardD1">
+            <a
+              href="../programKerja/prokerPP.html"
+              class="card text-decoration-none"
+            >
+              <div class="card-body">
+                <button class="btn mt-auto">Pemberdayaan Perempuan</button>
+              </div>
+            </a>
+          </div>
+        </div>
+      </section>
     </main>
 
-    <!-- Dashboard Aktif Konsultasi -->
-    <section class="consultation-bar text-center">
+    <footer class="hmi-footer mt-5">
       <div class="container">
-        <h4 class="mb-3">Dashboard Aktif Konsultasi</h4>
-        <div class="consult-icons">
-          <a href="https://wa.me/628123456789" target="_blank">💬 WhatsApp</a>
-          <a href="https://instagram.com/hmi_fsh_uinsu" target="_blank"
-            >📸 Instagram</a
-          >
-          <a href="https://t.me/developer_hmi" target="_blank">✈️ Telegram</a>
+        <div class="row align-items-center">
+          <div class="col-md-6 text-center text-md-start">
+            <p class="mb-0 fw-bold">
+              &copy; 2025-2028 HMI Komisariat FSH UINSU. Yakusa!
+            </p>
+          </div>
+          <div class="col-md-6 text-center text-md-end mt-3 mt-md-0">
+            <div class="dev-credits">
+              <p class="mb-0 small text-white-50">
+                Dikembangkan dengan ❤️ untuk HMI FSH UINSU
+              </p>
+              <a
+                href="https://wa.me/6282181858276"
+                class="developer-link small"
+              >
+                Hubungi Developer: WhatsApp Tech Support
+              </a>
+            </div>
+          </div>
         </div>
       </div>
-    </section>
-
-    <footer class="bg-body-tertiary py-4 w-100">
-      <div class="container text-center">
-        <p class="mb-0">&copy; 2025-2028 HMI Komisariat FSH UINSU. Yakusa!</p>
-      </div>
     </footer>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../src/script.js"></script>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+      crossorigin="anonymous"
+    ></script>
+    <script src="script.js"></script>
   </body>
 </html>
